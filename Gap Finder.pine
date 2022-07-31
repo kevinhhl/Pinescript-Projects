@@ -1,0 +1,94 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © DojiEmoji
+
+// Description:
+// From perspective of time-based charts, A gap is a “jump” in a security’s price between the Open and the Prior Close.
+// This script will draw lines whenever it locates discrepancies between Open and Close of two consecutive data points (candles).
+// The lines will be removed when subsequent candles introduced into the data contain low/high values crossing the lines' price in
+// direction opposite to the direction of the gaps.
+
+//@version=5
+indicator(title="Gap Finder [KL]", overlay=true)
+var string TYPE_PERCENT = "Percentage"
+var string TYPE_ABS     = "Absolute"
+var string FILLED_DEL   = "Delete"
+var string FILLED_KEEP  = "Show as dotted lines"
+var int extend_len      = 100
+
+// Settings
+var string thres_type   = input.string(TYPE_PERCENT, options=[TYPE_ABS, TYPE_PERCENT], title="Threshold type")
+var float thres_pcnt    = input.float(0, title="Threshold (%)", minval=0, maxval=100)/100
+var float thres_point   = input.float(0, title="Threshold (points)", minval=0)
+var color col_up        = input.color(color.new(#00ff0a, 0), title="Gap up", inline="Color")
+var color col_down      = input.color(color.new(#ff160C, 0), title="Gap down", inline="Color")
+var bool _extend_lns    = input.bool(false, title="Extend lines", tooltip="Suggested chart settings -> Scale price chart only")
+var string extend_lns   = _extend_lns ? extend.right : extend.none
+var bool wick_fill      = input.bool(true, title="Gap touched by wick considered as filled")
+var string _choice      = input.string(FILLED_DEL, options=[FILLED_DEL, FILLED_KEEP], title="Lines for filled gaps")
+var bool del_lns        = _choice == FILLED_DEL
+
+// For comparison: p1,p2,p3,p4
+float p1_upGap = math.max(open, close)[1]
+float p2_upGap = low
+float p3_dnGap = math.min(open, close)[1]
+float p4_dnGap = high
+
+// Finding gaps
+bool gap_up = false
+if thres_type == TYPE_PERCENT
+    gap_up := (p2_upGap > p1_upGap and math.abs(p2_upGap/p1_upGap - 1) > thres_pcnt)
+else if thres_type == TYPE_ABS
+    gap_up := (p2_upGap > p1_upGap and math.abs(p2_upGap - p1_upGap) > thres_point)
+
+bool gap_down = false
+if thres_type == TYPE_PERCENT
+    gap_down := (p4_dnGap < p3_dnGap and math.abs(p4_dnGap/p3_dnGap - 1) > thres_pcnt)
+else if thres_type == TYPE_ABS
+    gap_down := (p4_dnGap < p3_dnGap and math.abs(p4_dnGap - p3_dnGap) > thres_point)
+
+// Inserting lines
+var line[] arr_upgap = array.new_line() 
+var line[] arr_dngap = array.new_line()
+
+if gap_up
+    float _p = p1_upGap
+    line ln = line.new(bar_index, _p, bar_index+extend_len, _p, xloc.bar_index, extend_lns, col_up)
+    array.push(arr_upgap, ln)
+else if gap_down
+    float _p = p3_dnGap
+    line ln = line.new(bar_index, _p, bar_index+extend_len, _p, xloc.bar_index, extend_lns, col_down)
+    array.push(arr_dngap, ln)
+
+// Search for filled gaps, remove them from array
+if array.size(arr_upgap) > 0
+    for i=0 to array.size(arr_upgap) - 1
+        line ln = array.pop(arr_upgap)
+        float _y = line.get_y1(ln)
+        float _src_fill = wick_fill ? low : close
+        if _src_fill < _y and high[1] > _y
+            if del_lns
+                line.delete(ln)
+            else 
+                line.set_style(ln, line.style_dotted)
+                line.set_x2(ln, bar_index)
+                line.set_extend(ln, extend.none)
+        else
+            array.unshift(arr_upgap, ln) 
+
+if array.size(arr_dngap) > 0
+    for i=0 to array.size(arr_dngap) - 1
+        ln = array.pop(arr_dngap)
+        _y = line.get_y1(ln)
+        _src_fill = wick_fill ? high : close
+        if _src_fill > _y and low[1] < _y
+            if del_lns
+                line.delete(ln)
+            else 
+                line.set_style(ln, line.style_dotted)
+                line.set_x2(ln, bar_index)
+                line.set_extend(ln, extend.none)
+        else
+            array.unshift(arr_dngap, ln)
+
+// Alerts
+alertcondition(gap_up or gap_down, title = "Gap up/down", message = "{{ticker}} just gapped.") 

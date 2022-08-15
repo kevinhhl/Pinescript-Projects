@@ -13,14 +13,17 @@ float src            = input.source(close, title="Source data")
 
 var string GROUP_1   = "Box plot"
 var int ln_width     = input.int(2, title="Width", minval=1, maxval=4, group=GROUP_1)
-
-var string GROUP_2   = "Other plots"
-var bool show_hline  = input.bool(true, title="Current quartiles", group=GROUP_2, inline="cq")
-var bool show_bands  = input.bool(false, title="Moving quartiles", group=GROUP_2, inline="mq")
-
 var color color1     = input.color(color.blue, title="Box plot", group=GROUP_1)
-var color color2     = input.color(color.new(color.blue,0), title="", group=GROUP_2, inline="cq")
-var color color3     = input.color(color.new(color.blue,50), title="", group=GROUP_2, inline="mq")
+
+var string GROUP_2   = "Current IQR - Horizontal lines"
+var bool show_hline  = input.bool(true, title="IQR - Horizontal line", group=GROUP_2, inline="hlines")
+var color color2     = input.color(color.new(color.blue,0), title="", group=GROUP_2, inline="hlines")
+
+var string GROUP_3   = "Historical IQR - Moving lines"
+var bool show_bands  = input.bool(false, title="Show moving quartiles", group=GROUP_3)
+var color color_mQ1  = input.color(color.new(color.blue,50), title="Moving Q1 - 25th percentile", group=GROUP_3)
+var color color_mQ2  = input.color(color.new(color.blue,50), title="Moving Q2 - Median", group=GROUP_3)
+var color color_mQ3  = input.color(color.new(color.blue,50), title="Moving Q3 - 75th percentile", group=GROUP_3)
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Quartiles
@@ -98,6 +101,6 @@ if show_hline
     ln4q4 := line.new(bar_index-n, Q4, bar_index+offset-4, Q4, xloc.bar_index, color=color2, width=1, style=line.style_dotted)
 
 // Q3, Q1, and Q2: Upper/lower bands, and center line, respectively.
-plot(Q3, color=show_bands ? color3 : na, title="Q3 Upper band")
-plot(Q1, color=show_bands ? color3 : na, title="Q1 Lower band")
-plot(Q2, color=show_bands ? color3 : na, title="Q2 Center line")
+plot(Q3, color=show_bands ? color_mQ3 : na, title="Q3 Upper band")
+plot(Q1, color=show_bands ? color_mQ1 : na, title="Q1 Lower band")
+plot(Q2, color=show_bands ? color_mQ2 : na, title="Q2 Center line")

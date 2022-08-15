@@ -1,4 +1,4 @@
-# PublicStaticPineMain
+### PineScript Projects
 A repository containing open source projects that I put out on Tradingview's platform. 
 
 Goal is to use simple quantitative methods to systematically replicate the process of technical analysis (TA). Ironically, this process has made me accept the notion that price is random. In every TA strategy I’ve coded and tried backtesting with, I often see underperformance against market returns yielded by the underlying instrument had either long/short been taken and held during the time horizon of backtested period. I jump to conclude that short term trading (or the corrupted term called “daytrading”) should only be done if one is (a) restricted from holding overnight positions, and (b) employs capital provided by a third parties, or is levered in a way that still enables buffer for temporarily drawdowns. 

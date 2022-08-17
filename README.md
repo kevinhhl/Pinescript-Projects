@@ -1,8 +1,14 @@
 ### PineScript Projects
 A repository containing open source projects that I put out on Tradingview's platform. 
 
-Goal is to use simple quantitative methods to systematically replicate the process of technical analysis (TA). Ironically, this process has made me accept the notion that price is random. In every TA strategy I’ve coded and tried backtesting with, I often see underperformance against market returns yielded by the underlying instrument had either long/short been taken and held during the time horizon of backtested period. I jump to conclude that short term trading (or the corrupted term called “daytrading”) should only be done if one is (a) restricted from holding overnight positions, and (b) employs capital provided by a third parties, or is levered in a way that still enables buffer for temporarily drawdowns. 
+Goal is to use simple quantitative methods to systematically replicate the process of technical analysis (TA). 
 
-In my opinion, the application TA is no better than the flip of a coin, but the goal is to do it in the right time during interpreted euphoric moments. TA is essentially a form of tea leaf reading / horoscope reading (sarcasm intended, but also serious as well). But this should not deter one from spending time writing scripts to dabble around it (and I empathize that it should be “around” it, not “in” it). It’s still a fun exercise, similar to doing crossword puzzles. At the end of the day, one must still establish a systematic approach to deciding when to enter/exit as opposed to doing it based on mood swings. PineScript happens to be a great tool because runtime takes place in TradingView’s servers. 
+I still subscribe to the notion that randomness is an element that makes up price, at least in the short term in the grand scheme. If market is driven by human, and human-beings are considered to be irrational on the ground that emotions often override rationality, then TA must have no merits when it comes to speculating the future value of price.
+
+But having a strategy is still important. Fundamentals cannot be solely relied on for day/swing trading purposes because market participants tend to emotionally react to current price rather than what putting efforts to understand what make up companies' intrinsic values. I argue that price based on the most recent ticks is what make investors tick (pun intended). From this perspective, TA does have merits for trading, just not for anticipating the future value of the underlying asset, rather it's for speculating market's emotional perception of price.
+
+When it comes to TA, scripting helps because it eliminates cognitive bias that traders will have whenever presented with live charts. "Trade what you see, not what you think" a popular phrase originated from one of Larry Pesavento's books has somewhat now become a cliche. Professional traders with decades of experience can do this, but it is impossible for beginners, novices, or even the slight adept to perform.
+
+End of rambling. PineScript is a great tool. Runtime takes place in TradingView’s servers, and access to market data is readily available. 
 
 Link to the rest of my projects at http://tradingview.kevinhhl.com

@@ -18,35 +18,15 @@ var int ln_width     = input.int(2, title="Width", minval=1, maxval=4, group=GRO
 var bool show_hline_iqr    = input.bool(true, title="Show lines for rolling IQR", group=GROUP_1)
 var bool show_hline_maxmin = input.bool(false, title="Show lines for rolling Min & Max", group=GROUP_1)
 
-var string GROUP_3       = "Historical IQR - Moving lines"
+var string group_2       = "Historical IQR - Moving lines"
 var string _tt           = "Go to 'Style' tab to modify color/width"
-var bool show_bands_iqr  = input.bool(false, title="Show moving IQR", group=GROUP_3, tooltip=_tt)
-var bool show_bands_mm   = input.bool(false, title="Show moving Min & Max", group=GROUP_3, tooltip=_tt)
+var bool show_bands_iqr  = input.bool(false, title="Show moving IQR", group=group_2, tooltip=_tt)
+var bool show_bands_mm   = input.bool(false, title="Show moving Min & Max", group=group_2, tooltip=_tt)
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Quartiles
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-//// Original implementation: 
-//// ------------------------ {
-
-//// [1] Using an array of float to store newly observed data. New elements inserted at front, dropping out data points that no longer belong to the rolling window on FIFO basis.
-////
-// var float[] data = array.new_float()
-// if array.size(data) == n
-//     array.pop(data)
-// array.unshift(data, src)
-
-//// [2] Sorting the array so that percentiles can be obtained. But this needs to be done with a deep-copy otherwise FIFO ordering will be lost.
-////
-// data_sorted = array.copy(data) 
-// array.sort(data_sorted)
-
-//// [3] Applying linear interpolation to find 25th, 50th, and 75th percentile values by referring to indices of the sorted array.
-////
-//// ------------------------ }
-
-// Luckily, no need to reinvent the wheel when Pinescript has a function called percentile_linear_interpolation()
 float Q0 = ta.percentile_linear_interpolation(src, n, 0)
 float Q1 = ta.percentile_linear_interpolation(src, n, 25)
 float Q2 = ta.percentile_linear_interpolation(src, n, 50)
@@ -72,21 +52,22 @@ var box bx1 = na        // IQR
 
 // Helper functions {
 
+var line[] dump_lns = array.new_line()
 draw_line(offset_x1, y1, offset_x2, y2, ln_color, ln_width, ln_style=line.style_solid) =>
-    line.new(bar_index+offset_x1, y1, bar_index+offset_x2, y2, xloc.bar_index, color=ln_color, width=ln_width, style=ln_style)
+    ln = line.new(bar_index+offset_x1, y1, bar_index+offset_x2, y2, xloc.bar_index, color=ln_color, width=ln_width, style=ln_style)
+    array.push(dump_lns, ln)
+    ln
+
+del_lines() =>
+    while array.size(dump_lns) > 0
+        line.delete(array.pop(dump_lns)) 
 
 draw_IQR() =>
     box.new(bar_index+offset-2, Q3, bar_index+offset+2, Q1, border_color=color1, bgcolor=na, border_width=ln_width)
-
-del_lines(line[] lns) =>
-    for i=0 to array.size(lns)-1
-        line.delete(array.get(lns,i)) 
 // }
 
 // Clean up, prior iteration
-line.delete(ln1[1])
-line.delete(ln2a[1]), line.delete(ln2b[1]), line.delete(ln3a[1]), line.delete(ln3b[1])
-line.delete(ln4q0[1]), line.delete(ln4q1[1]), line.delete(ln4q2[1]), line.delete(ln4q3[1]), line.delete(ln4q4[1])
+del_lines()
 box.delete(bx1[1])
 
 // Box and whisker

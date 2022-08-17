@@ -1,29 +1,30 @@
 // This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 // © DojiEmoji
 
+//TODO: 
+// - Make hlines customizable in input tab
+
 //@version=5
 indicator("Quartiles with Box Plot [KL]", overlay=true)
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Settings
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-var int n            = input.int(20, title="Lookback", minval=1)
-var int offset       = input.int(5, minval=5, maxval=150, title="Offset: Box Plot", step=5)
 float src            = input.source(close, title="Source data")
+var int n            = input.int(20, title="Lookback", minval=1)
+var int offset       = input.int(5, minval=5, maxval=150, title="Offset: Box Plot", step=5, tooltip="Relative to recenrt bar (right hand side)")
 
 var string GROUP_1   = "Box plot"
-var int ln_width     = input.int(2, title="Width", minval=1, maxval=4, group=GROUP_1)
 var color color1     = input.color(color.blue, title="Box plot", group=GROUP_1)
+var int ln_width     = input.int(2, title="Width", minval=1, maxval=4, group=GROUP_1)
 
-var string GROUP_2   = "Current IQR - Horizontal lines"
-var bool show_hline  = input.bool(true, title="IQR - Horizontal line", group=GROUP_2, inline="hlines")
-var color color2     = input.color(color.new(color.blue,0), title="", group=GROUP_2, inline="hlines")
+var bool show_hline_iqr    = input.bool(true, title="Show lines for rolling IQR", group=GROUP_1)
+var bool show_hline_maxmin = input.bool(false, title="Show lines for rolling Min & Max", group=GROUP_1)
 
-var string GROUP_3   = "Historical IQR - Moving lines"
-var bool show_bands  = input.bool(false, title="Show moving quartiles", group=GROUP_3)
-var color color_mQ1  = input.color(color.new(color.blue,50), title="Moving Q1 - 25th percentile", group=GROUP_3)
-var color color_mQ2  = input.color(color.new(color.blue,50), title="Moving Q2 - Median", group=GROUP_3)
-var color color_mQ3  = input.color(color.new(color.blue,50), title="Moving Q3 - 75th percentile", group=GROUP_3)
+var string GROUP_3       = "Historical IQR - Moving lines"
+var string _tt           = "Go to 'Style' tab to modify color/width"
+var bool show_bands_iqr  = input.bool(false, title="Show moving IQR", group=GROUP_3, tooltip=_tt)
+var bool show_bands_mm   = input.bool(false, title="Show moving Min & Max", group=GROUP_3, tooltip=_tt)
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Quartiles
@@ -72,6 +73,19 @@ var line ln4q3 = na     // ''
 var line ln4q4 = na     // ''
 var box bx1 = na        // IQR
 
+// Helper functions {
+
+draw_line(offset_x1, y1, offset_x2, y2, ln_color, ln_width, ln_style=line.style_solid) =>
+    line.new(bar_index+offset_x1, y1, bar_index+offset_x2, y2, xloc.bar_index, color=ln_color, width=ln_width, style=ln_style)
+
+draw_IQR() =>
+    box.new(bar_index+offset-2, Q3, bar_index+offset+2, Q1, border_color=color1, bgcolor=na, border_width=ln_width)
+
+del_lines(line[] lns) =>
+    for i=0 to array.size(lns)-1
+        line.delete(array.get(lns,i)) 
+// }
+
 // Clean up, prior iteration
 line.delete(ln1[1])
 line.delete(ln2a[1])
@@ -85,22 +99,27 @@ line.delete(ln4q3[1])
 line.delete(ln4q4[1])
 box.delete(bx1[1])
 
-// Drawing box and whiskers
-ln1 := line.new(bar_index+offset-2, Q2, bar_index+offset+2, Q2, xloc.bar_index, color=color1, width=ln_width)
-ln2a := line.new(bar_index+offset, Q1, bar_index+offset, Q0, xloc.bar_index, color=color1, width=ln_width)
-ln2b := line.new(bar_index+offset-1, Q0, bar_index+offset+1, Q0, xloc.bar_index, color=color1, width=ln_width)
-ln3a := line.new(bar_index+offset, Q3, bar_index+offset, Q4, xloc.bar_index, color=color1, width=ln_width)
-ln3b := line.new(bar_index+offset-1, Q4, bar_index+offset+1, Q4, xloc.bar_index, color=color1, width=ln_width)
-bx1 := box.new(bar_index+offset-2, Q3, bar_index+offset+2, Q1, border_color=color1, bgcolor=na, border_width=ln_width)
+// Box and whisker
+ln1 := draw_line(offset-2, Q2, offset+2, Q2, color1, ln_width)
+ln2a := draw_line(offset, Q1, offset, Q0, color1, ln_width)
+ln2b := draw_line(offset-1, Q0, offset+1, Q0, color1, ln_width)
+ln3a := draw_line(offset, Q3, offset, Q4, color1, ln_width)
+ln3b := draw_line(offset-1, Q4, offset+1, Q4, color1, ln_width)
+bx1 := draw_IQR()
 
-if show_hline
-    ln4q0 := line.new(bar_index-n, Q0, bar_index+offset-4, Q0, xloc.bar_index, color=color2, width=1, style=line.style_dotted)
-    ln4q1 := line.new(bar_index-n, Q1, bar_index+offset-4, Q1, xloc.bar_index, color=color2, width=1, style=line.style_dotted)
-    ln4q2 := line.new(bar_index-n, Q2, bar_index+offset-4, Q2, xloc.bar_index, color=color2, width=1, style=line.style_dotted)
-    ln4q3 := line.new(bar_index-n, Q3, bar_index+offset-4, Q3, xloc.bar_index, color=color2, width=1, style=line.style_dotted)
-    ln4q4 := line.new(bar_index-n, Q4, bar_index+offset-4, Q4, xloc.bar_index, color=color2, width=1, style=line.style_dotted)
+// Rolling quartiles
+if show_hline_iqr
+    ln4q1 := draw_line(-n, Q1, offset-4, Q1, color1, 1, line.style_dotted)
+    ln4q2 := draw_line(-n, Q2, offset-4, Q2, color1, 1, line.style_dotted)
+    ln4q3 := draw_line(-n, Q3, offset-4, Q3, color1, 1, line.style_dotted)
+if show_hline_maxmin
+    ln4q0 := draw_line(-n, Q0, offset-4, Q0, color1, 1, line.style_dotted)
+    ln4q4 := draw_line(-n, Q4, offset-4, Q4, color1, 1, line.style_dotted)
 
-// Q3, Q1, and Q2: Upper/lower bands, and center line, respectively.
-plot(Q3, color=show_bands ? color_mQ3 : na, title="Q3 Upper band")
-plot(Q1, color=show_bands ? color_mQ1 : na, title="Q1 Lower band")
-plot(Q2, color=show_bands ? color_mQ2 : na, title="Q2 Center line")
+// Moving quartiles
+plot(Q1, color=show_bands_iqr ? color1 : na, title="Q1 Lower band")
+plot(Q2, color=show_bands_iqr ? color1 : na, title="Q2 Center line")
+plot(Q3, color=show_bands_iqr ? color1 : na, title="Q3 Upper band")
+
+plot(Q0, color=show_bands_mm ? color1 : na, title="Q0 Min band")
+plot(Q4, color=show_bands_mm ? color1 : na, title="Q4 Max band")

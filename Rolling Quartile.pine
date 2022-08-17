@@ -88,15 +88,8 @@ del_lines(line[] lns) =>
 
 // Clean up, prior iteration
 line.delete(ln1[1])
-line.delete(ln2a[1])
-line.delete(ln2b[1])
-line.delete(ln3a[1])
-line.delete(ln3b[1])
-line.delete(ln4q0[1])
-line.delete(ln4q1[1])
-line.delete(ln4q2[1])
-line.delete(ln4q3[1])
-line.delete(ln4q4[1])
+line.delete(ln2a[1]), line.delete(ln2b[1]), line.delete(ln3a[1]), line.delete(ln3b[1])
+line.delete(ln4q0[1]), line.delete(ln4q1[1]), line.delete(ln4q2[1]), line.delete(ln4q3[1]), line.delete(ln4q4[1])
 box.delete(bx1[1])
 
 // Box and whisker

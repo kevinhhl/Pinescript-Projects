@@ -14,6 +14,7 @@ var int offset       = input.int(5, minval=5, maxval=150, title="Offset: Box Plo
 var string GROUP_1   = "Box plot"
 var color color1     = input.color(color.blue, title="Box plot", group=GROUP_1)
 var int ln_width     = input.int(2, title="Width", minval=1, maxval=4, group=GROUP_1)
+var bool mod_boxplot = input.bool(false, title="Use modified boxplot (Whiskers = 1.5x IQR)")
 
 var bool show_hline_iqr    = input.bool(true, title="Show lines for rolling IQR", group=GROUP_1)
 var bool show_hline_maxmin = input.bool(false, title="Show lines for rolling Min & Max", group=GROUP_1)
@@ -27,70 +28,75 @@ var bool show_bands_mm   = input.bool(false, title="Show moving Min & Max", grou
 // Quartiles
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-float Q0 = ta.percentile_linear_interpolation(src, n, 0)
 float Q1 = ta.percentile_linear_interpolation(src, n, 25)
 float Q2 = ta.percentile_linear_interpolation(src, n, 50)
 float Q3 = ta.percentile_linear_interpolation(src, n, 75)
-float Q4 = ta.percentile_linear_interpolation(src, n, 100)
+
+float iqr_mod = (Q3 - Q1) * 1.5
+float Q0 = mod_boxplot ? Q1 - iqr_mod : ta.percentile_linear_interpolation(src, n, 0)
+float Q4 = mod_boxplot ? Q3 + iqr_mod : ta.percentile_linear_interpolation(src, n, 100)
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Drawing Box Plot - to represent the quartiles
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// Objects used:        Representing:
-var line ln1 = na       // Median
-var line ln2a = na      // Vertical lines for Whiskers
-var line ln2b = na      // ''
-var line ln3a = na      // ''
-var line ln3b = na      // ''
-var line ln4q0 = na     // Horizontal lines, marking Q0 to Q4
-var line ln4q1 = na     // ''
-var line ln4q2 = na     // ''
-var line ln4q3 = na     // ''
-var line ln4q4 = na     // ''
-var box bx1 = na        // IQR
+// Horizontal lines:
+var line hline_q0 = na      //         ---      <- hline_q0
+var line hline_q1 = na      //          |
+var line hline_q2 = na      //          |
+var line hline_q3 = na      //       -------    <- hline_q1
+var line hline_q4 = na      //      |       | 
+                            //      |       | 
+// Box plot:                //      |-------|   <- hline_q2
+var box box_iqr = na        //      |       | 
+var line ln_q0 = na         //       -------    <- hline_q3
+var line ln_q0q1 = na       //          |
+var line ln_q2 = na         //          |
+var line ln_q4 = na         //         ---      <- hline_q4
+var line ln_q3q4 = na
 
-// Helper functions {
 
+// Helper functions: 
+// {
 var line[] dump_lns = array.new_line()
+
+// Lines drawn with draw_line() will be temporaily stored in an array of line ("AOL")
 draw_line(offset_x1, y1, offset_x2, y2, ln_color, ln_width, ln_style=line.style_solid) =>
     ln = line.new(bar_index+offset_x1, y1, bar_index+offset_x2, y2, xloc.bar_index, color=ln_color, width=ln_width, style=ln_style)
     array.push(dump_lns, ln)
     ln
-
+// All lines in AOL will get deleted in the next bar-iteration through del_lines()
 del_lines() =>
     while array.size(dump_lns) > 0
-        line.delete(array.pop(dump_lns)) 
-
-draw_IQR() =>
-    box.new(bar_index+offset-2, Q3, bar_index+offset+2, Q1, border_color=color1, bgcolor=na, border_width=ln_width)
+        line.delete(array.pop(dump_lns))   
 // }
 
-// Clean up, prior iteration
-del_lines()
-box.delete(bx1[1])
-
 // Box and whisker
-ln1 := draw_line(offset-2, Q2, offset+2, Q2, color1, ln_width)
-ln2a := draw_line(offset, Q1, offset, Q0, color1, ln_width)
-ln2b := draw_line(offset-1, Q0, offset+1, Q0, color1, ln_width)
-ln3a := draw_line(offset, Q3, offset, Q4, color1, ln_width)
-ln3b := draw_line(offset-1, Q4, offset+1, Q4, color1, ln_width)
-bx1 := draw_IQR()
+del_lines()
+ln_q0   := draw_line(offset-1, Q0, offset+1, Q0, color1, ln_width)
+ln_q0q1 := draw_line(offset+0, Q1, offset+0, Q0, color1, ln_width)
+ln_q2   := draw_line(offset-2, Q2, offset+2, Q2, color1, ln_width)
+ln_q3q4 := draw_line(offset+0, Q3, offset+0, Q4, color1, ln_width)
+ln_q4   := draw_line(offset-1, Q4, offset+1, Q4, color1, ln_width)
+
+box.delete(box_iqr[1])
+box_iqr := box.new(bar_index+offset-2, Q3, bar_index+offset+2, Q1,
+ border_color=color1, bgcolor=na, border_width=ln_width)
 
 // Rolling quartiles
 if show_hline_iqr
-    ln4q1 := draw_line(-n, Q1, offset-4, Q1, color1, 1, line.style_dotted)
-    ln4q2 := draw_line(-n, Q2, offset-4, Q2, color1, 1, line.style_dotted)
-    ln4q3 := draw_line(-n, Q3, offset-4, Q3, color1, 1, line.style_dotted)
+    hline_q1 := draw_line(-n, Q1, offset-4, Q1, color1, 1, line.style_dotted)
+    hline_q2 := draw_line(-n, Q2, offset-4, Q2, color1, 1, line.style_dotted)
+    hline_q3 := draw_line(-n, Q3, offset-4, Q3, color1, 1, line.style_dotted)
 if show_hline_maxmin
-    ln4q0 := draw_line(-n, Q0, offset-4, Q0, color1, 1, line.style_dotted)
-    ln4q4 := draw_line(-n, Q4, offset-4, Q4, color1, 1, line.style_dotted)
+    hline_q0 := draw_line(-n, Q0, offset-4, Q0, color1, 1, line.style_dotted)
+    hline_q4 := draw_line(-n, Q4, offset-4, Q4, color1, 1, line.style_dotted)
 
 // Moving quartiles
-plot(Q1, color=show_bands_iqr ? color1 : na, title="Q1 Lower band")
+p1 = plot(Q1, color=show_bands_iqr ? color1 : na, title="Q1 Lower band")
 plot(Q2, color=show_bands_iqr ? color1 : na, title="Q2 Center line")
-plot(Q3, color=show_bands_iqr ? color1 : na, title="Q3 Upper band")
+p2 = plot(Q3, color=show_bands_iqr ? color1 : na, title="Q3 Upper band")
+fill(p1, p2, color=color.new(color.gray,100), title="Moving IQR")
 
 plot(Q0, color=show_bands_mm ? color1 : na, title="Q0 Min band")
 plot(Q4, color=show_bands_mm ? color1 : na, title="Q4 Max band")

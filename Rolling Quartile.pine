@@ -7,22 +7,27 @@ indicator("Quartiles with Box Plot [KL]", overlay=true)
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Settings
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-float src            = input.source(close, title="Source data")
-var int n            = input.int(20, title="Lookback", minval=1)
-var int offset       = input.int(5, minval=5, maxval=150, title="Offset: Box Plot", step=5, tooltip="Relative to recenrt bar (right hand side)")
+float src                   = input.source(close, title="Source data")
+var int n                   = input.int(20, title="Lookback", minval=1)
+var int offset              = input.int(5, minval=5, maxval=150, title="Offset: Box Plot", step=5, tooltip="Relative to recenrt bar (right hand side)")
 
-var string GROUP_1   = "Box plot"
-var color color1     = input.color(color.blue, title="Box plot", group=GROUP_1)
-var int ln_width     = input.int(2, title="Width", minval=1, maxval=4, group=GROUP_1)
-var bool mod_boxplot = input.bool(false, title="Use modified boxplot (Whiskers = 1.5x IQR)")
+var string GROUP_1          = "Box plot"
+var color color1            = input.color(color.blue, title="Box plot", group=GROUP_1)
+var int ln_width            = input.int(2, title="Width", minval=1, maxval=4, group=GROUP_1)
+var bool mod_boxplot        = input.bool(false, title="Use modified boxplot (Whiskers = 1.5x IQR)")
+var bool show_hline_iqr     = input.bool(true, title="Show lines for rolling IQR", group=GROUP_1)
+var bool show_hline_maxmin  = input.bool(false, title="Show lines for rolling Min & Max", group=GROUP_1)
 
-var bool show_hline_iqr    = input.bool(true, title="Show lines for rolling IQR", group=GROUP_1)
-var bool show_hline_maxmin = input.bool(false, title="Show lines for rolling Min & Max", group=GROUP_1)
+var string GROUP_2          = "Historical IQR - Moving lines"
+var string _tt              = "Go to 'Style' tab to modify color/width"
+var bool show_bands_iqr     = input.bool(false, title="Show moving IQR", group=GROUP_2, tooltip=_tt)
+var bool show_bands_mm      = input.bool(false, title="Show moving Min & Max", group=GROUP_2, tooltip=_tt)
 
-var string group_2       = "Historical IQR - Moving lines"
-var string _tt           = "Go to 'Style' tab to modify color/width"
-var bool show_bands_iqr  = input.bool(false, title="Show moving IQR", group=group_2, tooltip=_tt)
-var bool show_bands_mm   = input.bool(false, title="Show moving Min & Max", group=group_2, tooltip=_tt)
+var string GROUP_3          = "Trend Indicator"
+var bool use_barcol         = input.bool(false, title="Modify bar colors according to trend:", tooltip="Based on whether price is above/within/below IQR.", group=GROUP_3)
+var color color2_up         = input.color(color.blue, title="Uptrend", group=GROUP_3)
+var color color3_neutral    = input.color(color.gray, title="Neutral", group=GROUP_3)
+var color color4_dn         = input.color(color.red, title="Downtrend", group=GROUP_3)
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Quartiles
@@ -100,3 +105,10 @@ fill(p1, p2, color=color.new(color.gray,100), title="Moving IQR")
 
 plot(Q0, color=show_bands_mm ? color1 : na, title="Q0 Min band")
 plot(Q4, color=show_bands_mm ? color1 : na, title="Q4 Max band")
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Bar Color (Trend Indicator)
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+barcolor(use_barcol and close > Q3 ? color2_up : na, editable=false)
+barcolor(use_barcol and close < Q3 and close > Q1 ? color3_neutral : na, editable=false)
+barcolor(use_barcol and close < Q1 ? color4_dn : na, editable=false)

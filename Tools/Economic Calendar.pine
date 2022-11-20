@@ -5,32 +5,45 @@
 indicator("Economic Calendar [DojiEmoji]", overlay=true, max_lines_count=500, max_labels_count=500)
 
 // Obtain source data:
-//     ie. Source: https://www.fxstreet.com/economic-calendar
-//
-// Using external tools (ie Excel, Python, etc.), filter the events that you want Pinescript to display.
-
+//   ie. Step 1: By obtaining from: https://www.fxstreet.com/economic-calendar
+//       Step 2: Using external tools (ie Excel, Python, etc.) to represent raw data in the format later described.
 // 
-// This script uses the following standardized string format:
-//
-//      Format = <date1> <description1> ; <date2> <description2> ;... <date_n> <description_n>
-//
-//      Where: 'date' is expressed as: YYYY,MM,DD,hh,mm,ss
 
-var string str_input = input.string(title="Data",
- tooltip="Standardized Format = <date1> <description1> ; <date2> <description2> ;... <date_n> <description_n>",
- defval="2022,10,3,14,0,0, - ISM Manufacturing PMI [USD];2022,10,5,12,15,0, - ADP Employment Change [USD];2022,10,5,14,0,0, - ISM Services PMI [USD];2022,10,7,12,30,0, - Nonfarm Payrolls [USD];2022,10,12,18,0,0, - FOMC Minutes [USD];2022,10,13,12,30,0, - Consumer Price Index ex Food & Energy (MoM) [USD];2022,10,13,12,30,0, - Consumer Price Index ex Food & Energy (YoY) [USD];2022,10,14,12,30,0, - Retail Sales (MoM) [USD];2022,10,14,12,30,0, - Retail Sales Control Group [USD];2022,10,14,14,0,0, - Michigan Consumer Sentiment Index [USD];2022,10,27,12,30,0, - Durable Goods Orders [USD];2022,10,27,12,30,0, - Gross Domestic Product Annualized [USD];2022,10,27,12,30,0, - Nondefense Capital Goods Orders ex Aircraft [USD];2022,11,1,14,0,0, - ISM Manufacturing PMI [USD];2022,11,2,12,15,0, - ADP Employment Change [USD];2022,11,2,18,0,0, - Fed Interest Rate Decision [USD];2022,11,2,18,0,0, - Fed's Monetary Policy Statement [USD];2022,11,2,18,30,0, - FOMC Press Conference [USD];2022,11,3,14,0,0, - ISM Services PMI [USD];2022,11,4,12,30,0, - Nonfarm Payrolls [USD];2022,11,10,13,30,0, - Consumer Price Index ex Food & Energy (MoM) [USD];2022,11,10,13,30,0, - Consumer Price Index ex Food & Energy (YoY) [USD];2022,11,11,15,0,0, - Michigan Consumer Sentiment Index [USD];2022,11,16,13,30,0, - Retail Sales (MoM) [USD];2022,11,16,13,30,0, - Retail Sales Control Group [USD];2022,11,23,13,30,0, - Durable Goods Orders [USD];2022,11,23,13,30,0, - Nondefense Capital Goods Orders ex Aircraft [USD];2022,11,23,19,0,0, - FOMC Minutes [USD];2022,11,30,13,15,0, - ADP Employment Change [USD];2022,11,30,13,30,0, - Gross Domestic Product Annualized [USD];2022,12,1,15,0,0, - ISM Manufacturing PMI [USD];2022,12,2,13,30,0, - Nonfarm Payrolls [USD];2022,12,5,15,0,0, - ISM Services PMI [USD];2022,12,9,15,0,0, - Michigan Consumer Sentiment Index [USD];2022,12,13,13,30,0, - Consumer Price Index ex Food & Energy (MoM) [USD];2022,12,13,13,30,0, - Consumer Price Index ex Food & Energy (YoY) [USD];2022,12,14,19,0,0, - Fed Interest Rate Decision [USD];2022,12,14,19,0,0, - Fed's Monetary Policy Statement [USD];2022,12,14,19,0,0, - FOMC Economic Projections [USD];2022,12,14,19,30,0, - FOMC Press Conference [USD];2022,12,15,13,30,0, - Retail Sales (MoM) [USD];2022,12,15,13,30,0, - Retail Sales Control Group [USD];2022,12,22,13,30,0, - Gross Domestic Product Annualized [USD];2022,12,23,13,30,0, - Durable Goods Orders [USD];2022,12,23,13,30,0, - Nondefense Capital Goods Orders ex Aircraft [USD];")
+// This script uses the following standardized format:
+//
+//      Format = <timezone>;<date1>;<date2>; ... etc, up to the last event on <date_n>
+// 
+//               Where: 'date' is expressed as: YYYY,MM,DD,hh,mm,ss
+//
+
+
+// ------------------
+// Settings:
+// ------------------
+// {
+var string str_input = input.string(title="Source Data",
+ tooltip="Pasted From external tools (ie. Spreadsheet). A template has been provided in the blog post associated with this script).",
+ defval="GMT;2022,6,1,14,0,0;2022,6,2,12,15,0;2022,6,3,12,30,0;2022,6,3,14,0,0;2022,6,3,14,30,0;2022,6,7,14,0,0;2022,6,10,12,30,0;2022,6,10,12,30,0;2022,6,10,14,0,0;2022,6,15,12,30,0;2022,6,15,12,30,0;2022,6,15,18,0,0;2022,6,15,18,0,0;2022,6,15,18,0,0;2022,6,15,18,30,0;2022,6,17,12,45,0;2022,6,22,13,30,0;2022,6,22,18,0,0;2022,6,23,14,0,0;2022,6,23,20,30,0;2022,6,27,12,30,0;2022,6,27,12,30,0;2022,6,29,12,30,0;2022,6,29,13,0,0;2022,7,1,14,0,0;2022,7,6,14,0,0;2022,7,6,18,0,0;2022,7,8,12,30,0;2022,7,13,12,30,0;2022,7,13,12,30,0;2022,7,15,12,30,0;2022,7,15,12,30,0;2022,7,15,14,0,0;2022,7,27,12,30,0;2022,7,27,12,30,0;2022,7,27,18,0,0;2022,7,27,18,0,0;2022,7,27,18,30,0;2022,7,28,12,30,0;2022,8,1,14,0,0;2022,8,2,23,30,0;2022,8,3,14,0,0;2022,8,5,12,30,0;2022,8,10,12,30,0;2022,8,10,12,30,0;2022,8,12,14,0,0;2022,8,17,12,30,0;2022,8,17,12,30,0;2022,8,17,18,0,0;2022,8,24,12,30,0;2022,8,24,12,30,0;2022,8,25,12,30,0;2022,8,25,14,0,0;2022,8,26,14,0,0;2022,8,26,14,0,0;2022,8,27,14,0,0;2022,8,31,12,15,0;2022,8,31,12,15,5;2022,8,31,12,15,10;2022,9,1,14,0,0;2022,9,2,12,30,0;2022,9,6,14,0,0;2022,9,8,13,10,0;2022,9,13,12,30,0;2022,9,13,12,30,0;2022,9,15,12,30,0;2022,9,15,12,30,0;2022,9,16,14,0,0;2022,9,21,18,0,0;2022,9,21,18,0,0;2022,9,21,18,0,0;2022,9,21,18,30,0;2022,9,23,18,0,0;2022,9,27,11,30,0;2022,9,27,12,30,0;2022,9,27,12,30,0;2022,9,28,14,15,0;2022,9,29,12,30,0;2022,10,3,14,0,0;2022,10,5,12,15,0;2022,10,5,14,0,0;2022,10,7,12,30,0;2022,10,12,18,0,0;2022,10,13,12,30,0;2022,10,13,12,30,0;2022,10,14,12,30,0;2022,10,14,12,30,0;2022,10,14,14,0,0;2022,10,27,12,30,0;2022,10,27,12,30,0;2022,10,27,12,30,0;2022,11,1,14,0,0;2022,11,2,12,15,0;2022,11,2,18,0,0;2022,11,2,18,0,0;2022,11,2,18,30,0;2022,11,3,14,0,0;2022,11,4,12,30,0;2022,11,10,13,30,0;2022,11,10,13,30,0;2022,11,11,15,0,0;2022,11,16,13,30,0;2022,11,16,13,30,0;2022,11,23,13,30,0;2022,11,23,13,30,0;2022,11,23,19,0,0;2022,11,30,13,15,0;2022,11,30,13,30,0;2022,11,30,18,30,0;2022,12,1,15,0,0;2022,12,2,13,30,0;2022,12,5,15,0,0;2022,12,9,15,0,0;2022,12,13,13,30,0;2022,12,13,13,30,0;2022,12,14,19,0,0;2022,12,14,19,0,0;2022,12,14,19,0,0;2022,12,14,19,30,0;2022,12,15,13,30,0;2022,12,15,13,30,0;2022,12,22,13,30,0;2022,12,23,13,30,0;2022,12,23,13,30,0;")
 
 var color linecolor = input.color(color.new(color.yellow,50))
-var int linewidth = input.int(2)
-var string timezone = input.string("GMT")
+var int linewidth   = input.int(2, title="Width of line", minval=1, maxval=5)
 
+// }
+
+
+// ------------------
+// Drawing lines:
+// ------------------
+// {
 var string[] tokens = str.split(str_input,";")
+var string timezone = array.get(tokens, 0)
 var int[] datetime_events = array.new_int()
-var string[] desc_events = array.new_string()
 
 // Helper function:
 _process_raw_data() =>
-    for i=0 to array.size(tokens)-1
+
+    // Skip the first element (reserved for timezone)
+    for i=1 to array.size(tokens)-1
 
         string[] subtokens = str.split(array.get(tokens,i), ",")
         if array.size(subtokens) > 0
@@ -41,36 +54,15 @@ _process_raw_data() =>
             int hh       = int(str.tonumber(array.get(subtokens, 3)))
             int mm       = int(str.tonumber(array.get(subtokens, 4)))
             int ss       = int(str.tonumber(array.get(subtokens, 5)))
-            string desc  = array.get(subtokens, 6)
             
             t = timestamp(timezone, yyyy, mmm, dd, hh, mm, ss)
             line.new(t, close, t, close*1.0001, xloc.bar_time, extend.both, linecolor, width=linewidth)
 
             // Store
             array.push(datetime_events, t)
-            array.push(desc_events, desc)
 
-// Runtime
+// Runtime. Perform task [draw line] only once.
 if barstate.islast and array.size(datetime_events) == 0 
-    // Init
     if array.size(datetime_events) == 0
         _process_raw_data()
-
-
-// TODO: A good way to display upcoming / past events
-// Idea is to use labels + tooltips.
-// Alternatively, tables, but they take up too much space.
-// 
-
-// Display info about next event
-var label lbl_info = na//, label.delete(lbl_info)
-
-var int p = 0 // pointer -> index of array (datetime_events); next event
-
-if array.size(datetime_events) > 0
-    while(array.get(datetime_events, p) -86400 < time)
-        p += 1
-
-    _info = "Next event: " + array.get(desc_events, p)
-    if p[0] != p[1]
-        lbl_info := label.new(bar_index +10, open, text="ℹ️\n", xloc=xloc.bar_index, yloc=yloc.price, color=na, textalign=text.align_left, tooltip=_info, textcolor=linecolor)
+// }

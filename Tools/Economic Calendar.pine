@@ -63,6 +63,8 @@ _process_raw_data() =>
 
 // Runtime. Perform task [draw line] only once.
 if barstate.islast and array.size(datetime_events) == 0 
-    if array.size(datetime_events) == 0
+    if array.size(datetime_events) != 0
+        runtime.error(message = "Task [of drawing lines] should only been done once.")         
+    else
         _process_raw_data()
 // }

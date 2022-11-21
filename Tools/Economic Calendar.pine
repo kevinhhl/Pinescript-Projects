@@ -6,7 +6,7 @@ indicator("Economic Calendar [DojiEmoji]", overlay=true, max_lines_count=500, ma
 
 // Obtain source data:
 //   ie. Step 1: By obtaining from: https://www.fxstreet.com/economic-calendar
-//       Step 2: Using external tools (ie Excel, Python, etc.) to represent raw data in the format later described.
+//       Step 2: Using external tools (ie Excel, Python, etc.) to create a line of text that resembles calendar events.
 // 
 
 // This script uses the following standardized format:
@@ -15,7 +15,6 @@ indicator("Economic Calendar [DojiEmoji]", overlay=true, max_lines_count=500, ma
 // 
 //               Where: 'date' is expressed as: YYYY,MM,DD,hh,mm,ss
 //
-
 
 // ------------------
 // Settings:
@@ -28,14 +27,13 @@ var string str_input = input.text_area(title="Source Data",
 var int linewidth   = input.int(2, title="Width of line", minval=1, maxval=5)
 var color linecolor = input.color(color.new(color.yellow,50))
 
+// Clean up the input, strip out all empty spaces.
 if barstate.isfirst
-    str_input := str.replace_all(str_input, " ", "")    // Just in case there are unnecessary space characters
+    str_input := str.replace_all(str_input, " ", "")
     
     if str_input == ""
         runtime.error(message = "Source data is empty.")
-
 // }
-
 
 // ------------------
 // Drawing lines:
@@ -43,10 +41,9 @@ if barstate.isfirst
 // {
 var string[] tokens = str.split(str_input,";")
 var string timezone = array.get(tokens, 0)
-var int[] datetime_events = array.new_int()
 
-if barstate.islast and array.size(datetime_events) == 0
-
+// Helper function:
+_process_raw_data() =>
     // Skip the first element (reserved for timezone)
     for i=1 to array.size(tokens)-1
 
@@ -63,7 +60,8 @@ if barstate.islast and array.size(datetime_events) == 0
             t = timestamp(timezone, yyyy, mmm, dd, hh, mm, ss)
             line.new(t, close, t, close*1.0001, xloc.bar_time, extend.both, linecolor, width=linewidth)
 
-            // Store
-            array.push(datetime_events, t)
 
+// Runtime. Only performed once.
+if barstate.islast
+    _process_raw_data()
 // }

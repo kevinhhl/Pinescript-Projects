@@ -4,15 +4,17 @@
 //@version=5
 indicator("Economic Calendar [DojiEmoji]", overlay=true, max_lines_count=500, max_labels_count=500)
 
+var int MAX_LINES = 500 // Set it at Pinescript's limit for max. no. of lines draw [500] 
+
 // Obtain source data:
 //   ie. Step 1: By obtaining from: https://www.fxstreet.com/economic-calendar
-//       Step 2: Using external tools (ie Excel, Python, etc.) to create a line of text that resembles calendar events.
+//       Step 2: Using external tools (ie Excel, Python, etc.) to create a line of text that resembles 
+//               calendar events.
 // 
 
 // This script uses the following standardized format:
 //
-//      Format = <timezone>;<date1>;<date2>; ... etc, up to the last event on <date_n>
-// 
+//     Format = <timezone>;<date1>;<date2>; ... etc, up to the last event on <date_n>
 //               Where: 'date' is expressed as: YYYY,MM,DD,hh,mm,ss
 //
 
@@ -26,13 +28,6 @@ var string str_input = input.text_area(title="Source Data",
 
 var int linewidth   = input.int(2, title="Width of line", minval=1, maxval=5)
 var color linecolor = input.color(color.new(color.yellow,50))
-
-// Clean up the input, strip out all empty spaces.
-if barstate.isfirst
-    str_input := str.replace_all(str_input, " ", "")
-    
-    if str_input == ""
-        runtime.error(message = "Source data is empty.")
 // }
 
 // ------------------
@@ -41,10 +36,15 @@ if barstate.isfirst
 // {
 var string[] tokens = str.split(str_input,";")
 var string timezone = array.get(tokens, 0)
+var int[] timestamps = na
 
-// Helper function:
-_process_raw_data() =>
-    // Skip the first element (reserved for timezone)
+// @function : get_timestamps 
+// @returns array of int : Date of Events in Unix time, sorted.
+get_timestamps() =>
+
+    int[] return_arr_time = array.new_int()
+
+    // First element is reserved for 'timezone'
     for i=1 to array.size(tokens)-1
 
         string[] subtokens = str.split(array.get(tokens,i), ",")
@@ -57,11 +57,31 @@ _process_raw_data() =>
             int mm       = int(str.tonumber(array.get(subtokens, 4)))
             int ss       = int(str.tonumber(array.get(subtokens, 5)))
             
-            t = timestamp(timezone, yyyy, mmm, dd, hh, mm, ss)
-            line.new(t, close, t, close*1.0001, xloc.bar_time, extend.both, linecolor, width=linewidth)
+            array.push(return_arr_time, timestamp(timezone, yyyy, mmm, dd, hh, mm, ss))
+
+    array.sort(return_arr_time)
+    return_arr_time
+
+// }
 
 
-// Runtime. Only performed once.
-if barstate.islast
-    _process_raw_data()
+
+// MAIN:
+// {
+if barstate.isfirst
+    
+    str_input := str.replace_all(str_input, " ", "") // Strip out all empty spaces.
+    
+    if str_input == ""
+        runtime.error(message = "Source data is empty.")
+
+if barstate.islast and na(timestamps)
+    timestamps := get_timestamps()
+    _n = array.size(timestamps) 
+        
+    // Assert: int[] timestamps sorted by chronological order
+    // Iterate through most recent 'MAX_LINES'=500 events; fail-safe approach to ensure most recent lines get drawn (ignore oldest events when n > 500)
+    for i=math.max(0, _n - MAX_LINES)  to _n-1
+        t = array.get(timestamps, i)
+        line.new(t, close, t, close*1.0001, xloc.bar_time, extend.both, linecolor, width=linewidth)
 // }

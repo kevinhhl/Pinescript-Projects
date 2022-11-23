@@ -38,6 +38,20 @@ var string[] tokens = str.split(str_input,";")
 var string timezone = array.get(tokens, 0)
 var int[] timestamps = na
 
+// @function : _adjust
+//             To adjust for potential timing differences.
+//             Original Unix time might cause lines to offset when chart viewed on other timeframes (ie 12hour).
+//
+// Thanks to @jdehorty for pointing this out and letting me use his logic for converting.
+// https://www.tradingview.com/script/HLYDwa0N-Economic-Calendar-Events-FOMC-CPI-and-more/
+_adjust(int t) => 
+    switch 
+        timeframe.isdaily and timeframe.multiplier > 1 => t - timeframe.multiplier*86400000 // -n days
+        timeframe.isweekly => t - timeframe.multiplier*604800000 // -n week(s)
+        timeframe.ismonthly => t - timeframe.multiplier*2592000000 // -n month(s)
+        timeframe.isminutes and timeframe.multiplier > 60 => t - timeframe.multiplier*60000 // -n minutes
+        => t
+
 // @function : get_timestamps 
 // @returns array of int : Date of Events in Unix time, sorted.
 get_timestamps() =>
@@ -57,7 +71,7 @@ get_timestamps() =>
             int mm       = int(str.tonumber(array.get(subtokens, 4)))
             int ss       = int(str.tonumber(array.get(subtokens, 5)))
             
-            array.push(return_arr_time, timestamp(timezone, yyyy, mmm, dd, hh, mm, ss))
+            array.push(return_arr_time, _adjust(timestamp(timezone, yyyy, mmm, dd, hh, mm, ss)))
 
     array.sort(return_arr_time, order.ascending)
     return_arr_time

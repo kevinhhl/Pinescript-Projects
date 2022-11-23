@@ -59,7 +59,7 @@ get_timestamps() =>
             
             array.push(return_arr_time, timestamp(timezone, yyyy, mmm, dd, hh, mm, ss))
 
-    array.sort(return_arr_time)
+    array.sort(return_arr_time, order.ascending)
     return_arr_time
 
 // }

@@ -1,6 +1,15 @@
 // This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 // © DojiEmoji
 
+
+// TODO:
+// + Categories, custom names and colors
+//      + Table showing names of categories, textcolor=linecolor of that category
+// + Checkbox to display/hide cateogry
+//      >>> if hidden, then table should be updated ->> set color (and/or background) of text gray; it look like it has been disabled
+
+
+
 //@version=5
 indicator("Economic Calendar [DojiEmoji]", overlay=true, max_lines_count=500, max_labels_count=500)
 

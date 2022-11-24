@@ -13,20 +13,22 @@ indicator("Auto Trendline [DojiEmoji]", format=format.price, precision=0, overla
 
 // Input:
 var int n = input.int(10, title="Fractal Periods", minval=2)
-var bool use_plot = input.bool(true, title="Plot fractals", inline="plot")
-var color col_fract = input.color(color.new(color.blue,0), title="", inline="plot")
-var int plot_width = input.int(3, title="Width", inline="plot", minval=1, maxval=5)
+
+var string GROUP_PLOT = "Plot:"
+var color col_hl = input.color(color.blue, title="", inline="plot_low", group=GROUP_PLOT)
+var bool show_hl = input.bool(true, title="Plot HL", inline="plot_low", group=GROUP_PLOT)
+var color col_ll = input.color(color.gray, title="", inline="plot_low", group=GROUP_PLOT)
+var bool show_ll = input.bool(false, title="Plot LL", inline="plot_low", group=GROUP_PLOT)
+var color col_lh = input.color(color.red, title="", inline="plot_high", group=GROUP_PLOT)
+var bool show_lh = input.bool(true, title="Plot LH", inline="plot_high", group=GROUP_PLOT)
+var color col_hh = input.color(color.gray, title="", inline="plot_high", group=GROUP_PLOT)
+var bool show_hh = input.bool(false, title="Plot HH", inline="plot_high", group=GROUP_PLOT)
 
 // Using built in pivot points function(n,n) to depict fractals
 float ph = ta.pivothigh(n, n)[1]
 float pl = ta.pivotlow(n, n)[1]
 bool upfract = not na(ph)
 bool downfract = not na(pl)
-
-plot(high[n+1], style=plot.style_circles, color=use_plot and upfract ? col_fract : na, 
- linewidth=plot_width, offset=-n-1, editable=false)
-plot(low[n+1], style=plot.style_circles, color=use_plot and downfract ? col_fract : na, 
- linewidth=plot_width, offset=-n-1, editable=false)
 
 
 // ----------------------------------------------------------------------------
@@ -93,33 +95,46 @@ cleanup(line[] arr) =>
         while array.size(arr) > math.floor(max_tl/2)
             line.delete(array.pop(arr)) 
 
-// Checking for fractals & Drawing trendlines
-if downfract
-    recent_dn2:=recent_dn1
-    i_recent_dn2:=i_recent_dn1
-    recent_dn1:=low[n+1]
-    i_recent_dn1 := bar_index-n-1
-    
-    ln_dn = line.new(i_recent_dn2, recent_dn2, i_recent_dn1, recent_dn1, xloc.bar_index, 
-     str_extend, color=ln_col_recent, style=line.style_dashed, width=lnwidth_recent)
-    array.unshift(arr_ln_dn, ln_dn)
-    cleanup(arr_ln_dn)
-
-if upfract
-    recent_up2:=recent_up1
-    i_recent_up2:=i_recent_up1
-    recent_up1:=high[n+1]
-    i_recent_up1 := bar_index-n-1
-    
+// @function : draw upper trendline
+_draw_upper_TL() =>    
     ln_up = line.new(i_recent_up2, recent_up2, i_recent_up1, recent_up1, xloc.bar_index, 
      str_extend, color=ln_col_recent, style=line.style_dashed, width=lnwidth_recent)
     array.unshift(arr_ln_up, ln_up) 
     cleanup(arr_ln_up)
 
+// @function : draw lower trendline
+_draw_lower_TL() =>
+    ln_dn = line.new(i_recent_dn2, recent_dn2, i_recent_dn1, recent_dn1, xloc.bar_index, 
+     str_extend, color=ln_col_recent, style=line.style_dashed, width=lnwidth_recent)
+    array.unshift(arr_ln_dn, ln_dn)
+    cleanup(arr_ln_dn)
+
+// Checking for fractals & Drawing trendlines
+if downfract
+    recent_dn2:=recent_dn1, i_recent_dn2:=i_recent_dn1
+    recent_dn1:=low[n+1],   i_recent_dn1 := bar_index-n-1
+    _draw_lower_TL()
+
+if upfract
+    recent_up2:=recent_up1, i_recent_up2:=i_recent_up1
+    recent_up1:=high[n+1],  i_recent_up1 := bar_index-n-1
+    _draw_upper_TL()
+
+// Plotting fractals
+hh = not na(ph) and recent_up1 > recent_up2 ? high[n+1] : na
+lh = not na(ph) and recent_up1 < recent_up2 ? high[n+1] : na
+
+hl = not na(pl) and recent_dn1 > recent_dn2 ? low[n+1] : na
+ll = not na(pl) and recent_dn1 < recent_dn2 ? low[n+1] : na
+
+plotshape(show_hh and hh, style=shape.circle, size=size.tiny, offset=-n-1, title="HH", text="HH", location=location.abovebar, textcolor=col_hh, color=na, editable=false)
+plotshape(show_lh and lh, style=shape.circle, size=size.tiny, offset=-n-1, title="LH", text="LH", location=location.abovebar, textcolor=col_lh, color=na, editable=false)
+plotshape(show_ll and ll, style=shape.circle, size=size.tiny, offset=-n-1, title="LL", text="LL", location=location.belowbar, textcolor=col_ll, color=na, editable=false)
+plotshape(show_hl and hl, style=shape.circle, size=size.tiny, offset=-n-1, title="HL", text="HL", location=location.belowbar, textcolor=col_hl, color=na, editable=false)
+
 // ----------------------------------------------------------------------------
 // Finding crosses between closing price & pair of most recent trendlines
 // ----------------------------------------------------------------------------
-
 // Linear extrapolation
 // Solving for price at current x (bar_index), given two pairs of fractals with x values < bar_index.
 float m_dn = get_slope(i_recent_dn1, recent_dn1, i_recent_dn2, recent_dn2)

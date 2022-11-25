@@ -19,53 +19,53 @@ var int MAX_LINES = 500 // Set it at Pinescript's limit for max. no. of lines dr
 //               Where: 'date' is expressed as: YYYY,MM,DD,hh,mm,ss
 //
 
-// ------------------
+// -----------------------
 // Settings:
-// ------------------
+// -----------------------
 // {
-var string GROUP_CAT1    = "---------- Category 1 ----------"
+var string GROUP_CAT1    = "--------------- Category 1 ---------------"
 var bool show_cat_1      = input.bool(true, title="Show category:", inline="ln1", group=GROUP_CAT1)
-var string name_cat1     = input.string("FOMC", title="", inline="ln1", group=GROUP_CAT1)
-var string str_input_1   = input.text_area(title="Source Data:", group=GROUP_CAT1, 
+var color linecolor_cat1 = input.color(color.new(color.red,50), title="", inline="ln2", group=GROUP_CAT1)
+var string name_cat1     = input.string("FOMC Related", title="", inline="ln1", group=GROUP_CAT1)
+var string str_input_1   = input.text_area(title="Source Data, Category 1:", group=GROUP_CAT1, 
  tooltip="Pasted From external tools (ie. Spreadsheet). A template has been provided in the blog post associated with this script).",
  defval="GMT;2022,9,21,18,0,0;2022,9,21,18,30,0;2022,10,12,18,0,0;2022,11,2,18,30,0;2022,11,23,19,0,0;2022,12,14,19,0,0;2022,12,14,19,30,0;2023,1,4,19,0,0;2023,2,1,19,30,0;2023,2,15,19,0,0;2023,3,22,18,0,0;2023,3,22,18,30,0;")
-var color linecolor_cat1 = input.color(color.new(color.red,50), title="Line Color", inline="ln2", group=GROUP_CAT1)
 var int linewidth_cat1   = input.int(2, title="Width", minval=1, maxval=5, inline="ln2", group=GROUP_CAT1)
 
-var string GROUP_CAT2    = "---------- Category 2 ----------"
+var string GROUP_CAT2    = "--------------- Category 2 ---------------"
 var bool show_cat_2      = input.bool(true, title="Show category:", inline="ln1", group=GROUP_CAT2)
+var color linecolor_cat2 = input.color(color.new(color.yellow,50), title="", inline="ln2", group=GROUP_CAT2)
 var string name_cat2     = input.string("Others", title="", inline="ln1", group=GROUP_CAT2)
-var string str_input_2   = input.text_area(title="Source Data:", group=GROUP_CAT2, 
+var string str_input_2   = input.text_area(title="Source Data, Category 2:", group=GROUP_CAT2, 
  tooltip="Pasted From external tools (ie. Spreadsheet). A template has been provided in the blog post associated with this script).", 
  defval="GMT;2022,9,1,14,0,0;2022,9,2,12,30,0;2022,9,6,14,0,0;2022,9,8,13,10,0;2022,9,13,12,30,0;2022,9,13,12,30,0;2022,9,15,12,30,0;2022,9,15,12,30,0;2022,9,16,14,0,0;2022,9,21,18,0,0;2022,9,21,18,0,0;2022,9,23,18,0,0;2022,9,27,11,30,0;2022,9,27,12,30,0;2022,9,27,12,30,0;2022,9,28,14,15,0;2022,9,29,12,30,0;2022,10,3,14,0,0;2022,10,5,12,15,0;2022,10,5,14,0,0;2022,10,7,12,30,0;2022,10,13,12,30,0;2022,10,13,12,30,0;2022,10,14,12,30,0;2022,10,14,12,30,0;2022,10,14,14,0,0;2022,10,27,12,30,0;2022,10,27,12,30,0;2022,10,27,12,30,0;2022,11,1,14,0,0;2022,11,2,12,15,0;2022,11,2,18,0,0;2022,11,2,18,0,0;2022,11,3,14,0,0;2022,11,4,12,30,0;2022,11,10,13,30,0;2022,11,10,13,30,0;2022,11,11,15,0,0;2022,11,16,13,30,0;2022,11,16,13,30,0;2022,11,23,13,30,0;2022,11,23,13,30,0;2022,11,30,13,15,0;2022,11,30,13,30,0;2022,11,30,18,30,0;2022,12,1,15,0,0;2022,12,2,13,30,0;2022,12,5,15,0,0;2022,12,9,15,0,0;2022,12,13,13,30,0;2022,12,13,13,30,0;2022,12,14,19,0,0;2022,12,14,19,0,0;2022,12,15,13,30,0;2022,12,15,13,30,0;2022,12,22,13,30,0;2022,12,23,13,30,0;2022,12,23,13,30,0;2023,1,2,15,0,0;2023,1,4,13,15,0;2023,1,5,15,0,0;2023,1,6,13,30,0;2023,1,12,13,30,0;2023,1,12,13,30,0;2023,1,13,15,0,0;2023,1,17,13,30,0;2023,1,18,13,30,0;2023,1,26,13,30,0;2023,1,26,13,30,0;2023,1,26,13,30,0;2023,2,1,13,15,0;2023,2,1,15,0,0;2023,2,1,19,0,0;2023,2,1,19,0,0;2023,2,3,13,30,0;2023,2,3,15,0,0;2023,2,10,15,0,0;2023,2,14,13,30,0;2023,2,14,13,30,0;2023,2,15,13,30,0;2023,2,15,13,30,0;2023,2,23,13,30,0;2023,2,27,13,30,0;2023,2,27,13,30,0;2023,3,1,13,15,0;2023,3,1,15,0,0;2023,3,3,13,30,0;2023,3,3,15,0,0;2023,3,10,15,0,0;2023,3,14,12,30,0;2023,3,14,12,30,0;2023,3,15,12,30,0;2023,3,15,12,30,0;2023,3,22,18,0,0;2023,3,22,18,0,0;2023,3,23,12,30,0;2023,3,24,12,30,0;2023,3,24,12,30,0;")
-var color linecolor_cat2 = input.color(color.new(color.yellow,50), title="Line Color", inline="ln2", group=GROUP_CAT2)
 var int linewidth_cat2   = input.int(2, title="Width", minval=1, maxval=5, inline="ln2", group=GROUP_CAT2)
 
-var string GROUP_CAT3    = "---------- Category 3 ----------"
+var string GROUP_CAT3    = "--------------- Category 3 ---------------"
 var bool show_cat_3      = input.bool(true, title="Show category:", inline="ln1", group=GROUP_CAT3)
+var color linecolor_cat3 = input.color(color.new(color.orange,50), title="", inline="ln2", group=GROUP_CAT3)
 var string name_cat3     = input.string("Category 3", title="", inline="ln1", group=GROUP_CAT3)
-var string str_input_3   = input.text_area(title="Source Data:", group=GROUP_CAT3, 
+var string str_input_3   = input.text_area(title="Source Data, Category 3:", group=GROUP_CAT3, 
  tooltip="Pasted From external tools (ie. Spreadsheet). A template has been provided in the blog post associated with this script).", 
  defval="")
-var color linecolor_cat3 = input.color(color.new(color.orange,50), title="Line Color", inline="ln2", group=GROUP_CAT3)
 var int linewidth_cat3   = input.int(2, title="Width", minval=1, maxval=5, inline="ln2", group=GROUP_CAT3)
 
-var string GROUP_CAT4    = "---------- Category 4 ----------"
+var string GROUP_CAT4    = "--------------- Category 4 ---------------"
 var bool show_cat_4      = input.bool(true, title="Show category:", inline="ln1", group=GROUP_CAT4)
+var color linecolor_cat4 = input.color(color.new(color.green,50), title="", inline="ln2", group=GROUP_CAT4)
 var string name_cat4     = input.string("Category 4", title="", inline="ln1", group=GROUP_CAT4)
-var string str_input_4   = input.text_area(title="Source Data:", group=GROUP_CAT4, 
+var string str_input_4   = input.text_area(title="Source Data, Category 4:", group=GROUP_CAT4, 
  tooltip="Pasted From external tools (ie. Spreadsheet). A template has been provided in the blog post associated with this script).", 
  defval="")
-var color linecolor_cat4 = input.color(color.new(color.green,50), title="Line Color", inline="ln2", group=GROUP_CAT4)
 var int linewidth_cat4   = input.int(2, title="Width", minval=1, maxval=5, inline="ln2", group=GROUP_CAT4)
 
-var string GROUP_CAT5    = "---------- Category 5 ----------"
+var string GROUP_CAT5    = "--------------- Category 5 ---------------"
 var bool show_cat_5      = input.bool(true, title="Show category:", inline="ln1", group=GROUP_CAT5)
+var color linecolor_cat5 = input.color(color.new(color.blue,50), title="", inline="ln2", group=GROUP_CAT5)
 var string name_cat5     = input.string("Category 5", title="", inline="ln1", group=GROUP_CAT5)
-var string str_input_5   = input.text_area(title="Source Data:", group=GROUP_CAT5, 
+var string str_input_5   = input.text_area(title="Source Data, Category 5:", group=GROUP_CAT5, 
  tooltip="Pasted From external tools (ie. Spreadsheet). A template has been provided in the blog post associated with this script).", 
  defval="")
-var color linecolor_cat5 = input.color(color.new(color.blue,50), title="Line Color", inline="ln2", group=GROUP_CAT5)
 var int linewidth_cat5   = input.int(2, title="Width", minval=1, maxval=5, inline="ln2", group=GROUP_CAT5)
 
 // }
@@ -108,9 +108,6 @@ get_timestamps(string str_input) =>
 
     array.sort(return_arr_time, order.ascending)
     return_arr_time
-
-// }
-
 
 // MAIN:
 // {

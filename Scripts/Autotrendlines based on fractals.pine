@@ -47,23 +47,24 @@ get_slope(xA, yA, xB, yB) =>
 var string GROUP_ATL    = "Auto trendlines"
 var int LINE_WIDTH1     = 1, var string LINE_WIDTH1_STR = "Width 1"
 var int LINE_WIDTH2     = 2, var string LINE_WIDTH2_STR = "Width 2"
+_get_width(string str_input) =>
+    return_int = switch str_input
+        LINE_WIDTH1_STR => LINE_WIDTH1
+        LINE_WIDTH2_STR => LINE_WIDTH2
+    return_int
 
 var string subgroup1    = "recent line"
 var color ln_col_recent = input.color(color.new(color.red, 0), title="Recent Line", 
  group=GROUP_ATL, inline=subgroup1)
-int _lnwidth_recent = switch input.string(LINE_WIDTH1_STR, options=[LINE_WIDTH1_STR, LINE_WIDTH2_STR], 
- title="", inline=subgroup1, group=GROUP_ATL)
-    LINE_WIDTH1_STR => LINE_WIDTH1
-    LINE_WIDTH2_STR => LINE_WIDTH2
+int _lnwidth_recent = _get_width(input.string(LINE_WIDTH1_STR, options=[LINE_WIDTH1_STR, LINE_WIDTH2_STR], 
+ title="", inline=subgroup1, group=GROUP_ATL))
 var int lnwidth_recent  = _lnwidth_recent
 
 var string subgroup2    = "historical line"
 var color ln_col_prev   = input.color(color.new(color.gray, 50), title="Historical Line", 
  group=GROUP_ATL, inline=subgroup2)
-int _lnwidth_prev = switch input.string(LINE_WIDTH1_STR, options=[LINE_WIDTH1_STR, LINE_WIDTH2_STR], 
- title="", inline=subgroup2, group=GROUP_ATL)
-    LINE_WIDTH1_STR => LINE_WIDTH1
-    LINE_WIDTH2_STR => LINE_WIDTH2
+int _lnwidth_prev = _get_width(input.string(LINE_WIDTH1_STR, options=[LINE_WIDTH1_STR, LINE_WIDTH2_STR], 
+ title="", inline=subgroup2, group=GROUP_ATL))
 var int lnwidth_prev  = _lnwidth_prev
 
 var int max_tl          = input.int(1, title="Max pair of lines", maxval=250, minval=1, group=GROUP_ATL)*2

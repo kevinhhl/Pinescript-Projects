@@ -1,0 +1,24 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © DojiEmoji
+
+//@version=5
+
+
+indicator("Drift [DojiEmoji]", overlay=false)
+
+var int len_drift = input(14, title="Lookback")
+var string _repaint_mode = input.string("Off", title="Repaint mode on/off", options=["On", "Off"])
+var bool repaint_mode = _repaint_mode == "On"
+
+// @function get_drift()
+// @param int n : lookback period
+// @returns float drift, a value that depicts trend with +/- signs signifying up/down (respectively)
+get_drift(int n) =>
+    _pc = math.log(close / close[1])
+    return_drift = ta.sma(_pc, len_drift) - math.pow(ta.stdev(_pc, len_drift), 2) * 0.5
+    return_drift
+
+float drift = get_drift(len_drift)
+color _col = drift > 0 ? color.blue : color.red
+plot(drift[repaint_mode?0:1], color=_col[repaint_mode?0:1], linewidth=2, offset=repaint_mode?0:-1)
+plot(0, color=color.new(color.gray, 0)) // zeroline

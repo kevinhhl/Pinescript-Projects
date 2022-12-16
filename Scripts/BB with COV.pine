@@ -18,14 +18,12 @@ float stdev = ta.stdev(src, length)
 float CoV   = stdev / mean
 
 //------------------------------
-// Visualizations
+// Visualizing COV
 //------------------------------
 var string GROUP_VIZ = "Visualizations: Coefficient of Variation (COV)"
-var color col_min    =input.color(color.new(color.black,50), title="Low CoV", group=GROUP_VIZ, inline="col")
+var color col_min    =input.color(color.new(#131722,50), title="Low CoV", group=GROUP_VIZ, inline="col")
 var color col_max    =input.color(color.new(color.yellow,50), title="High CoV", group=GROUP_VIZ, inline="col",
- tooltip="Will compare COV at each bar over the past n bars, and then display ranking in terms of percentiles using a color scale.")
-
-plot(mean, title="Center line")
+ tooltip="Comparing COV at each bar over the past n bars.")
 
 fill(
  plot(2 * stdev + mean, color=na),
@@ -36,4 +34,5 @@ fill(
 // Signals
 //------------------------------
 bool is_ranging = CoV < ta.median(CoV, length)
-bgcolor(is_ranging ? col_min : na, title="Ranging")
+var bool show_bg = input.bool(false, title="Highlight background when price is consolidating")
+bgcolor(show_bg  and is_ranging ? col_min : na, title="Ranging")

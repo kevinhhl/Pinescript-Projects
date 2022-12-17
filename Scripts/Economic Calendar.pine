@@ -21,7 +21,7 @@ indicator("Economic Calendar [DojiEmoji]", overlay=true, max_lines_count=500, ma
 // Settings:
 // -----------------------
 // {
-var bool show_table = input.bool(true, title="Show table displaying ledgend for colors")
+var bool show_table = input.bool(true, title="Show table displaying legend for colors")
 var string str_table_position = input.string(position.bottom_right, options=[position.bottom_right, position.top_right, position.bottom_left], title="Location of table")
 var color bgcolor_table = input.color(color.new(color.black,90), title="Background", inline="ln1")
 var string font_size = input.string(size.small, inline="ln1", title="Font size", options=[size.tiny, size.small, size.normal, size.large, size.huge])

@@ -14,6 +14,7 @@ indicator("Auto Trendline [DojiEmoji]", format=format.price, precision=0, overla
 // {
 var string GROUP_FRACT = "Fractals"
 var int n = input.int(10, title="Fractal Periods", minval=2, group=GROUP_FRACT)
+
 var color col_hl = input.color(color.blue, title="Plot:", inline="plot_low", group=GROUP_FRACT)
 var bool show_hl = input.bool(true, title="HL", inline="plot_low", group=GROUP_FRACT)
 var color col_ll = input.color(color.gray, title=", Plot:", inline="plot_low", group=GROUP_FRACT)
@@ -25,10 +26,8 @@ var bool show_hh = input.bool(false, title="HH", inline="plot_high", group=GROUP
 // }
 
 // A Fractal is always a Pivot H/L (but a Pivot H/L is not always a Fractal):
-float ph = ta.pivothigh(n, n)[1]
-float pl = ta.pivotlow(n, n)[1]
-bool upfract = not na(ph)
-bool downfract = not na(pl)
+float ph = ta.pivothigh(n, n)[1], bool upfract = not na(ph)
+float pl = ta.pivotlow(n, n)[1],  bool downfract = not na(pl)
 
 alertcondition(not na(ph) or not na(pl), title="New trendline formed", message="New trendline formed")
 
@@ -49,7 +48,7 @@ _get_width(string str_input) =>
     return_int
 
 var string subgroup1    = "recent line"
-var color ln_col_recent = input.color(color.new(color.red, 0), title="Recent Line", group=GROUP_ATL, inline=subgroup1)
+var color ln_col_recent = input.color(color.new(color.purple, 0), title="Recent Line", group=GROUP_ATL, inline=subgroup1)
 var int lnwidth_recent  = _get_width(input.string(LINE_WIDTH1_STR, options=[LINE_WIDTH1_STR, LINE_WIDTH2_STR], title="", inline=subgroup1, group=GROUP_ATL))
 var string subgroup2    = "historical line"
 var color ln_col_prev   = input.color(color.new(color.gray, 50), title="Historical Line", group=GROUP_ATL, inline=subgroup2)
@@ -62,55 +61,45 @@ var string str_extend   = _str_extend == "Both ways" ? extend.both : extend.righ
 var bool show_crosses   = input.bool(false, title="Show crosses", tooltip="Instances when closing price of a bar has crossed lower/upper trendlines", group=GROUP_ATL)
 // }
 
-// Recent fractals.
-var float recent_dn1   = low,   var int i_recent_dn1 = bar_index
-var float recent_up1   = high,  var int i_recent_up1 = bar_index
-var float recent_dn2   = low,   var int i_recent_dn2 = bar_index
-var float recent_up2   = high,  var int i_recent_up2 = bar_index
-
 // Array of lines, newest elements inserted to front.
 var line[] arr_ln_up = array.new_line() 
 var line[] arr_ln_dn = array.new_line()
 
-// @function cleanup()
-// @returns void : To delete excess lines and assign new color to historical lines.
-cleanup(line[] arr) =>
-    if array.size(arr) > 1
-        line.set_color(array.get(arr, 1), ln_col_prev)
-        line.set_width(array.get(arr, 1), lnwidth_prev)
-        while array.size(arr) > math.floor(max_tl/2)
-            line.delete(array.pop(arr)) 
+// @function _draw_TL()
+_draw_TL(x2, y2, x1, y1, arr_ln) =>
+    array.unshift(arr_ln,
+     line.new(x2, y2, x1, y1, xloc.bar_index, str_extend, color=ln_col_recent, style=line.style_dashed, width=lnwidth_recent))
+    // Clean up
+    if array.size(arr_ln) > 1
+        line.set_color(array.get(arr_ln, 1), ln_col_prev)
+        line.set_width(array.get(arr_ln, 1), lnwidth_prev)
+        while array.size(arr_ln) > math.floor(max_tl/2)
+            line.delete(array.pop(arr_ln))
 
-// @function : draw upper trendline
-_draw_upper_TL() =>    
-    ln_up = line.new(i_recent_up2, recent_up2, i_recent_up1, recent_up1, xloc.bar_index, 
-     str_extend, color=ln_col_recent, style=line.style_dashed, width=lnwidth_recent)
-    array.unshift(arr_ln_up, ln_up) 
-    cleanup(arr_ln_up)
+// Pointers -> Recent fractals
+// {
+var float recent_dn1   = na,  var int i_recent_dn1 = na
+var float recent_up1   = na,  var int i_recent_up1 = na
+var float recent_dn2   = na,  var int i_recent_dn2 = na
+var float recent_up2   = na,  var int i_recent_up2 = na
 
-// @function : draw lower trendline
-_draw_lower_TL() =>
-    ln_dn = line.new(i_recent_dn2, recent_dn2, i_recent_dn1, recent_dn1, xloc.bar_index, 
-     str_extend, color=ln_col_recent, style=line.style_dashed, width=lnwidth_recent)
-    array.unshift(arr_ln_dn, ln_dn)
-    cleanup(arr_ln_dn)
-
-// Checking for fractals & Drawing trendlines
-if downfract
-    recent_dn2:=recent_dn1, i_recent_dn2:=i_recent_dn1
+if downfract 
+    recent_dn2:=recent_dn1, i_recent_dn2 := i_recent_dn1
     recent_dn1:=low[n+1],   i_recent_dn1 := bar_index-n-1
-    _draw_lower_TL()
+    _draw_TL(i_recent_dn2, recent_dn2, i_recent_dn1, recent_dn1, arr_ln_dn)
 
-if upfract
-    recent_up2:=recent_up1, i_recent_up2:=i_recent_up1
+if upfract 
+    recent_up2:=recent_up1, i_recent_up2 := i_recent_up1
     recent_up1:=high[n+1],  i_recent_up1 := bar_index-n-1
-    _draw_upper_TL()
+    _draw_TL(i_recent_up2, recent_up2, i_recent_up1, recent_up1, arr_ln_up)
+
+// }
 
 // Plotting fractals
-bool hh = not na(ph) and recent_up1 > recent_up2 ? high[n+1] : na
-bool lh = not na(ph) and recent_up1 < recent_up2 ? high[n+1] : na
-bool hl = not na(pl) and recent_dn1 > recent_dn2 ? low[n+1] : na
-bool ll = not na(pl) and recent_dn1 < recent_dn2 ? low[n+1] : na
+bool hh = upfract and recent_up1 > recent_up2 ? high[n+1] : na
+bool lh = upfract and recent_up1 < recent_up2 ? high[n+1] : na
+bool hl = downfract and recent_dn1 > recent_dn2 ? low[n+1] : na
+bool ll = downfract and recent_dn1 < recent_dn2 ? low[n+1] : na
 
 plotshape(show_hh and hh, style=shape.circle, size=size.tiny, offset=-n-1, title="HH", text="HH", location=location.abovebar, textcolor=col_hh, color=na, editable=false)
 plotshape(show_lh and lh, style=shape.circle, size=size.tiny, offset=-n-1, title="LH", text="LH", location=location.abovebar, textcolor=col_lh, color=na, editable=false)
@@ -131,12 +120,12 @@ float y_dn = (m_dn * bar_index) + recent_dn1 - (m_dn * i_recent_dn1)
 float m_up = get_slope(i_recent_up1, recent_up1, i_recent_up2, recent_up2)
 float y_up = (m_up * bar_index) + recent_up1 - (m_up * i_recent_up1)
 
-// Plotting crosses
-bool crossed_top = ta.cross(close, y_up)
-bool crossed_bottom = ta.cross(close, y_dn)
-plotshape(show_crosses and crossed_top, title = "Crossed upper trendline", style = shape.xcross, 
+// Plotting cross over/under
+bool co = ta.cross(close, y_up) 
+bool cu = ta.cross(close, y_dn) 
+plotshape(show_crosses and co, title = "Crossed upper trendline", style = shape.xcross, 
  location = location.belowbar, color = color.new(color = color.green, transp = 50), size = size.small)
-plotshape(show_crosses and crossed_bottom, title = "Crossed lower trendline", style = shape.xcross, 
+plotshape(show_crosses and cu, title = "Crossed lower trendline", style = shape.xcross, 
  location = location.abovebar, color = color.new(color = color.red, transp = 50), size = size.small)
 
-alertcondition(crossed_top or crossed_bottom, title="Upper/lower trendline crossed", message="Upper/lower trendline crossed")
+alertcondition(co or cu, title="Upper/lower trendline crossed", message="Upper/lower trendline crossed")

@@ -5,12 +5,12 @@
 indicator("3Bar Pivot [DojiEmoji]", overlay=true)
 
 //---------------------
-// Settings - Fixed:
-var int ATR_FILTER_LENGTH = 200
-var float ATR_FILTER_MULTI = 0.5 
-
-//---------------------
 // Settings - Adjustable:
+var int atr_filter_len = input.int(200, minval=200, inline="ln1", title="Threshold: ATR")
+var float atr_filter_multi = input.float(0.5, minval=0.01, maxval=1, step=0.1, inline="ln1", title="x",
+ tooltip="The minimum distance that candles [over 3 bars] must 'gap' by in order for move to be considered significant.\n\n-Higher Multi. => Less lines \n-Lower Multi. => More lines (might be noisy)"
+ )
+
 var color col_up    = input.color(color.new(color.blue,0), title="Colors for Up move / Down move:", inline="ln2", group="Plots")
 var color col_dn    = input.color(color.new(color.red,0), title="/", inline="ln2", group="Plots")
 var int linewidth   = input.int(2, minval=1, maxval=9,title="Width of the line", group="Plots")
@@ -18,7 +18,7 @@ var int linewidth   = input.int(2, minval=1, maxval=9,title="Width of the line",
 // Data structures:  
 // {
 
-// A) data points associated with the most recent FVG.
+// A) Attributes 
 type gap
     float pivot_upper = na
     float pivot_lower = na
@@ -26,11 +26,8 @@ type gap
     color linecolor = na
     int barindex = na
 
-// B) array of gaps, new gaps inserted at i=0
+// B) Array of gaps, to keep track of them.
 var history = array.new<gap>()
-if barstate.isfirst
-    array.push(history, gap.new()) // dummy, to prevent none type errors
-
 
 // @function _init(gap)
 _init(gap g, float upperbound, float lowerbound, color linecolor) =>
@@ -40,6 +37,9 @@ _init(gap g, float upperbound, float lowerbound, color linecolor) =>
     g.linecolor := linecolor
     g.barindex := bar_index
     array.unshift(history, g)
+
+if barstate.isfirst
+    array.push(history, gap.new()) // to prevent none type errors at the beginning of size is 0
 //}
 
 //---------------------
@@ -47,30 +47,27 @@ _init(gap g, float upperbound, float lowerbound, color linecolor) =>
 // {
 
 // Requirement 1: Displacement test;        upward FVG must > 0, and downward FVG must < 0
-// Requirement 2: Threshold test;           distance of FVG must > user defined ATR x multi
+// Requirement 2: Threshold test;           distance of FVG must > ATR200 x 0.5
 
 float displacement_up = low[0] - high[2]  // Test for FVG-up
 float displacement_dn = high[0] - low[2]  // Test for FVG-down
 
 // FVG is valid iff both requirements (1 & 2) are met:
-float _threshold = ta.atr(ATR_FILTER_LENGTH) * ATR_FILTER_MULTI
+float _threshold = ta.atr(atr_filter_len) * atr_filter_multi
 if math.abs(displacement_up) > _threshold and displacement_up > 0
     _init(gap.new(), low[0], high[2], col_up)
 if math.abs(displacement_dn) > _threshold and displacement_dn < 0
     _init(gap.new(), high[2], low[0], col_dn)
 // }
 
-
 //---------------------
 // Plotting:
 // {
-
 gap recent_gap = array.get(history,0)
-float _pivot = recent_gap.pivot_mid
-float main_pivot = _pivot[0]==_pivot[1] ? _pivot[1] : na
+float main_pivot = recent_gap.pivot_mid[0] == recent_gap.pivot_mid[1] ? recent_gap.pivot_mid[0] : na
 plot(main_pivot, color=recent_gap.linecolor, linewidth=linewidth, title="Pivot", offset=-1, editable=false, style=plot.style_linebr)
 // }
 
 //---------------------
 // Alert:
-alertcondition(ta.change(main_pivot) != 0, title="FVG up/down", message="FVG up/down")
+alertcondition(ta.change(main_pivot) != 0, title="FVG up/down", message="New FVG pivot alert")

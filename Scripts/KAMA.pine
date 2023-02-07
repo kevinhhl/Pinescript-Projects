@@ -3,7 +3,7 @@
 
 //@version=5
 
-indicator(title="Kaufman's Adaptive Moving Average (KAMA)", shorttitle="KAMA [KL]", overlay=true, timeframe="")
+indicator(title="Kaufman's Adaptive Moving Average (KAMA)", shorttitle="KAMA", overlay=true, timeframe="")
 
 // @function            Implementation of Kaufman's Efficiency Ratio ("ER").
 // @param src           (series float) Source data, typically the closing price.
@@ -19,7 +19,7 @@ er(src, len) =>
     net_chng / total_abs_chng
 
 
-var int period = input(10, title="Lookback period", group="KAMA")
+var int period = input.int(10, title="Lookback period", minval=2)
 
 // Kaufman's Adaptive Moving Average ("KAMA")
 // KAMA_t = KAMA_t-1 + sc_t * (p_t - KAMA_t-1)
@@ -30,7 +30,7 @@ var int period = input(10, title="Lookback period", group="KAMA")
 //   where: sc_t = (ER_t x (_FAST - _SLOW) + _SLOW) ^2
 //          _FAST = 2 / (fast MA period + 1)
 //          _SLOW = 2 / (slow MA period + 1)
-//  The fast and slow periods are usually 2 and 30
+//          Fast and slow periods are 2, and 30 (respectively)
 //  Source: Chapter 17, "Trading System and Methods - 6th edition" by Perry J. Kaufman
 
 var float _FAST = 0.666666666666667
@@ -40,22 +40,30 @@ sc_t = math.pow(abs_er * (_FAST-_SLOW) + _SLOW, 2)
 
 float KAMA_t = 0
 KAMA_t := nz(KAMA_t[1],close[1]) + sc_t * (close-nz(KAMA_t[1],close[1]))
-plot(KAMA_t, title="KAMA")
 
-// Barcolors to represent crossings (also considering whether they are red/green candles)
-var string GROUP_CROSS_COLL = "Coloring of bars"
-var bool show_crossings = input.bool(false, title="Use custom candle colors", group=GROUP_CROSS_COLL)
-var color col_xUp = input.color(color.blue, title="When price crosses above KAMA", group=GROUP_CROSS_COLL)
-var color col_xDn = input.color(color.red, title="When price crosses below KAMA", group=GROUP_CROSS_COLL)
-cross_up = ta.crossover(close, KAMA_t) and close > open
-cross_dn = ta.crossunder(close, KAMA_t) and close < open
-barcolor(show_crossings and cross_up ? col_xUp : na)
-barcolor(show_crossings and cross_dn ? col_xDn : na)
+
+//-----------------------
+// Experimental features 
+//-----------------------
+
+var string GROUP_EXP = "Experimental"
 
 // Background colors to visualize levels of market noise (experimental)
-var string GROUP_NOISE_COL = "Visualization of market noise (Experimental)"
-var bool bgcol_mode = input.bool(false, title="Fill background", tooltip="To visualize market noise.", group=GROUP_NOISE_COL)
-var color color_low  = input.color(color.new(color.green, 90),title="Low level of market noise", group=GROUP_NOISE_COL)
-var color color_high = input.color(color.new(color.red, 90),title="High level of market noise", group=GROUP_NOISE_COL)
-bgcolor(bgcol_mode and abs_er < 0.25 ? color_low : na)
-bgcolor(bgcol_mode and abs_er > 0.5 ? color_high : na)
+var bool bgcol_mode = input.bool(false, title="Fill background: Low / High Noise", group=GROUP_EXP, inline="ln0",
+ tooltip="To visualize market noise. Thresholds (min.) can be adjusted below.")
+var color color_low  = input.color(color.new(color.green, 90),title="Low level of market noise", group=GROUP_EXP, inline="ln1")
+var color color_high = input.color(color.new(color.red, 90),title="High level of market noise", group=GROUP_EXP, inline="ln1")
+var float thres_low = input.float(0.25, minval=0, maxval=0.5, step=0.01, title="Thresholds for Low / High Noise", inline="ln2", group=GROUP_EXP)
+var float thres_high = input.float(0.5, minval=0.5, maxval=1, step=0.01, title="/", inline="ln2", group=GROUP_EXP)
+bgcolor(bgcol_mode and abs_er < thres_low ? color_low : na)
+bgcolor(bgcol_mode and abs_er > thres_high ? color_high : na)
+
+// Smoothening
+var bool use_linreg = input.bool(false, title="Smooth KAMA:", inline="ln3", group=GROUP_EXP)
+var int smooth_period = input.int(10, title="Period", inline="ln3", group=GROUP_EXP, tooltip="Using the least squares method", minval=2)
+
+//-----------------------
+// Plot
+//-----------------------
+kama_plot = use_linreg ? ta.linreg(KAMA_t, smooth_period, 0) : KAMA_t
+plot(kama_plot, title="KAMA")

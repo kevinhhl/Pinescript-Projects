@@ -46,7 +46,7 @@ insert_gap(gap g, float price_t_minustwo, float price_t_zero) =>
 // @function get_recent_gap() returns an instance of gap obj.
 get_recent_gap() =>
     if array.size(_history) == 0
-        runtime.error(message="")      
+        runtime.error(message="Array of gaps is empty")      
     array.get(_history,0)
 //}
 

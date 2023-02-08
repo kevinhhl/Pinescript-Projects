@@ -42,7 +42,7 @@ var string _str_extend  = input.string("Right", options=["Right", "Both ways"], 
 var string str_extend   = _str_extend == "Both ways" ? extend.both : extend.right
 
 var bool show_crosses   = input.bool(false, title="Show crosses", tooltip="Instances when closing price of a bar has crossed lower/upper trendlines", group=GROUP_ATL)
-// } end of handle
+// }
 
 // ----------------------------------------------------------------------------
 // Fractal UDT and other relevant data structures: 
@@ -54,7 +54,8 @@ type fractal
     float yloc = na
     int xloc_parent = na
     float yloc_parent = na
-    line trendline = na                 // line that connects to prior pivot high / pivot low
+
+var fractal[] arr_fract = array.new<fractal>() // Useful if wanting to draw trendlines skipping no. of pivot points in between
 
 var line[] arr_ln_up = array.new_line() // Array of lines, newest elements inserted to front
 var line[] arr_ln_dn = array.new_line()
@@ -73,29 +74,26 @@ init_fractal(int fract_type, int xloc, float yloc, int xparent, float yparent)=>
         array.unshift(arr_ln_up, ln) 
     else if f.up_or_down == TYPE_DOWN
         array.unshift(arr_ln_dn, ln)
-    f // <- return 
+    
+    array.unshift(arr_fract, f) 
+    f // <- return
 
-// @function get_trendline() returns Line connecting to prior pivot high / pivot low
-get_trendline(fractal f) =>
-    f.trendline
-
-// @function drop_and_roll() returns void
+// @function drop_and_roll(new fractal) returns void
 // Clean up: Drop oldest trendlines, change colors for previous trendline
-drop_and_roll(int fract_type) =>
-    arr_ln = fract_type == TYPE_UP ? arr_ln_up : fract_type == TYPE_DOWN ? arr_ln_dn : na
+drop_and_roll(fractal f) =>
+    arr_ln = f.up_or_down == TYPE_UP ? arr_ln_up : f.up_or_down == TYPE_DOWN ? arr_ln_dn : na
     if array.size(arr_ln) > 1
         line.set_color(array.get(arr_ln, 1), ln_col_prev)
         line.set_width(array.get(arr_ln, 1), lnwidth_prev)
         while array.size(arr_ln) > math.floor(max_tl/2)
             line.delete(array.pop(arr_ln))
 
-// @function draw_trendline()
+// @function draw_trendline() returns void
 draw_trendline(fract_type, x2, y2, x1, y1) =>
-    fract = fractal.new()
-    init_fractal(fract_type, x2, y2, x1, y1)
-    drop_and_roll(fract_type)
+    f = init_fractal(fract_type, x2, y2, x1, y1)
+    drop_and_roll(f)
 
-// }
+// } end of handle for fractals
 
 // ----------------------------------------------------------------------------
 // Fractals, implemented using ta.pivot high && low 

@@ -42,22 +42,21 @@ var string _str_extend  = input.string("Right", options=["Right", "Both ways"], 
 var string str_extend   = _str_extend == "Both ways" ? extend.both : extend.right
 
 var bool show_crosses   = input.bool(false, title="Show crosses", tooltip="Instances when closing price of a bar has crossed lower/upper trendlines", group=GROUP_ATL)
-// }
+// } end of handle
 
 // ----------------------------------------------------------------------------
 // Fractal UDT and other relevant data structures: 
 // Handle fractals and trendlines associated with them
 // {
 type fractal
-    int up_or_down = na             // either TYPE_UP or TYPE_DOWN
+    int up_or_down = na                 // either TYPE_UP or TYPE_DOWN
     int xloc = na 
     float yloc = na
     int xloc_parent = na
     float yloc_parent = na
-    line trendline = na             // line that connects to prior pivot high / pivot low
+    line trendline = na                 // line that connects to prior pivot high / pivot low
 
-// Array of lines, newest elements inserted to front.
-var line[] arr_ln_up = array.new_line() 
+var line[] arr_ln_up = array.new_line() // Array of lines, newest elements inserted to front
 var line[] arr_ln_dn = array.new_line()
 
 // @function init_fractal() returns instance of fractal that has been init'ed
@@ -107,10 +106,6 @@ float ph = ta.pivothigh(n, n)[1], bool upfract = not na(ph)
 float pl = ta.pivotlow(n, n)[1],  bool downfract = not na(pl)
 
 alertcondition(not na(ph) or not na(pl), title="New trendline formed", message="New trendline formed")
-
-// ----------------------------------------------------------------------------
-// Auto trendlines
-// ----------------------------------------------------------------------------
 
 // Pointers -> Recent fractals
 // {

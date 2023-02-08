@@ -10,13 +10,11 @@ indicator(title="Kaufman's Adaptive Moving Average (KAMA)", shorttitle="KAMA", o
 // @param len           (int) Length of lookback period.
 // @returns             (float) efficiency ratio.
 er(src, len) =>
-    float total_abs_chng = 0// [B]
+    float total_abs_chng = 0
     for i = 1 to len by 1
         total_abs_chng += math.abs(src[i - 1] - src[i])
-    net_chng = src - src[len] // [A]
-    
-    // Return -> [A]/[B]
-    net_chng / total_abs_chng
+    // Return: net change / total absolute change
+    (src - src[len]) / total_abs_chng
 
 
 var int period = input.int(10, title="Lookback period", minval=2)

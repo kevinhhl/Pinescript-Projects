@@ -49,13 +49,16 @@ var bool show_crosses   = input.bool(false, title="Show crosses", tooltip="Insta
 // Handle fractals and trendlines associated with them
 // {
 type fractal
-    int up_or_down = na                 // either TYPE_UP or TYPE_DOWN
+    int up_or_down = na // either TYPE_UP or TYPE_DOWN
     int xloc = na 
     float yloc = na
     int xloc_parent = na
     float yloc_parent = na
 
-var fractal[] arr_fract = array.new<fractal>() // Useful if wanting to draw trendlines skipping no. of pivot points in between
+var fractal[] arr_fract = array.new<fractal>()  // Can be used for multiple purposes such as:
+                                                // (a) connecting trendlines but added condition to skip X no. of fractals in between
+                                                // (b) create a zigzag, since knowing foo.parent's x and y
+                                                // ... possibilities are endless
 
 var line[] arr_ln_up = array.new_line() // Array of lines, newest elements inserted to front
 var line[] arr_ln_dn = array.new_line()
@@ -149,12 +152,12 @@ float y_dn = (m_dn * bar_index) + recent_dn1 - (m_dn * i_recent_dn1)
 float m_up = get_slope(i_recent_up1, recent_up1, i_recent_up2, recent_up2)
 float y_up = (m_up * bar_index) + recent_up1 - (m_up * i_recent_up1)
 
-// Plotting cross over/under
-bool co = ta.crossover(close, y_up) 
-bool cu = ta.crossunder(close, y_dn) 
-plotshape(show_crosses and co, title = "Crossed upper trendline", style = shape.xcross, 
+// Plotting crosses
+bool cross_upper = ta.cross(close, y_up) 
+bool cross_lower = ta.cross(close, y_dn) 
+plotshape(show_crosses and cross_upper, title = "Crossed upper trendline", style = shape.xcross, 
  location = location.belowbar, color = color.new(color = color.blue, transp = 50), size = size.small)
-plotshape(show_crosses and cu, title = "Crossed lower trendline", style = shape.xcross, 
+plotshape(show_crosses and cross_lower, title = "Crossed lower trendline", style = shape.xcross, 
  location = location.abovebar, color = color.new(color = color.red, transp = 50), size = size.small)
 
-alertcondition(co or cu, title="Upper/lower trendline crossed", message="Upper/lower trendline crossed")
+alertcondition(cross_upper or cross_lower, title="Upper/lower trendline crossed", message="Upper/lower trendline crossed")

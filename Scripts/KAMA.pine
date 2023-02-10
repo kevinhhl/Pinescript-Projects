@@ -3,23 +3,22 @@
 
 //@version=5
 
-indicator(title="Kaufman's Adaptive Moving Average (KAMA)", shorttitle="KAMA", overlay=true, timeframe="")
+indicator(title="Kaufman's Adaptive Moving Average (KAMA)", shorttitle="KAMA", overlay=true, timeframe="", timeframe_gaps=false)
 
-// @function            Implementation of Kaufman's Efficiency Ratio ("ER").
-// @param src           (series float) Source data, typically the closing price.
-// @param len           (int) Length of lookback period.
-// @returns             (float) efficiency ratio.
+var int period = input.int(10, title="Lookback period", minval=2)
+
+// Implementation of Kaufman's Efficiency Ratio ("ER"):
+// (Previous script: https://www.tradingview.com/script/j9hCD2lP-Kaufman-s-Efficiency-Ratio-Indicator/)
+// @function er(source, length) returns float efficiency ratio.
 er(src, len) =>
     float total_abs_chng = 0
     for i = 1 to len by 1
         total_abs_chng += math.abs(src[i - 1] - src[i])
-    // Return: net change / total absolute change
-    (src - src[len]) / total_abs_chng
-
-
-var int period = input.int(10, title="Lookback period", minval=2)
+    (src - src[len]) / total_abs_chng                       // Return: net change / total absolute change
 
 // Kaufman's Adaptive Moving Average ("KAMA")
+// (Source: Chapter 17, "Trading System and Methods - 6th edition" by Perry J. Kaufman)
+// {
 // KAMA_t = KAMA_t-1 + sc_t * (p_t - KAMA_t-1)
 // where:
 //   p_t = current closing price
@@ -29,7 +28,7 @@ var int period = input.int(10, title="Lookback period", minval=2)
 //          _FAST = 2 / (fast MA period + 1)
 //          _SLOW = 2 / (slow MA period + 1)
 //          Fast and slow periods are 2, and 30 (respectively)
-//  Source: Chapter 17, "Trading System and Methods - 6th edition" by Perry J. Kaufman
+// }
 
 var float _FAST = 0.666666666666667
 var float _SLOW = 0.0645161290322581
@@ -47,21 +46,20 @@ KAMA_t := nz(KAMA_t[1],close[1]) + sc_t * (close-nz(KAMA_t[1],close[1]))
 var string GROUP_EXP = "Experimental"
 
 // Background colors to visualize levels of market noise (experimental)
-var bool bgcol_mode = input.bool(false, title="Fill background: Low / High Noise", group=GROUP_EXP, inline="ln0",
+var bool bgcol_mode  = input.bool(false, title="Fill background: Low / High Noise", group=GROUP_EXP, inline="ln0",
  tooltip="To visualize market noise. Thresholds (min.) can be adjusted below.")
 var color color_low  = input.color(color.new(color.green, 90),title="Low level of market noise", group=GROUP_EXP, inline="ln1")
 var color color_high = input.color(color.new(color.red, 90),title="High level of market noise", group=GROUP_EXP, inline="ln1")
-var float thres_low = input.float(0.25, minval=0, maxval=0.5, step=0.01, title="Thresholds for Low / High Noise", inline="ln2", group=GROUP_EXP)
+var float thres_low  = input.float(0.25, minval=0, maxval=0.5, step=0.01, title="Thresholds for Low / High Noise", inline="ln2", group=GROUP_EXP)
 var float thres_high = input.float(0.5, minval=0.5, maxval=1, step=0.01, title="/", inline="ln2", group=GROUP_EXP)
 bgcolor(bgcol_mode and abs_er < thres_low ? color_low : na)
 bgcolor(bgcol_mode and abs_er > thres_high ? color_high : na)
 
 // Smoothening
-var bool use_linreg = input.bool(false, title="Smooth KAMA:", inline="ln3", group=GROUP_EXP)
-var int smooth_period = input.int(10, title="Period", inline="ln3", group=GROUP_EXP, tooltip="Using the least squares method", minval=2)
+var bool use_linreg = input.bool(false, title="Smooth KAMA:", inline="ln3", group=GROUP_EXP, tooltip="Using the least squares method over the same window of lookback.")
 
 //-----------------------
 // Plot
 //-----------------------
-kama_plot = use_linreg ? ta.linreg(KAMA_t, smooth_period, 0) : KAMA_t
+kama_plot = use_linreg ? ta.linreg(KAMA_t, period, 0) : KAMA_t
 plot(kama_plot, title="KAMA")

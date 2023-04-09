@@ -1,0 +1,107 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © DojiEmoji 
+
+
+// This indicator uses a histogram to represent "fair value gaps" ("FVG"). FVG is a popular pattern among modern traders.
+// https://www.tradingview.com/script/Upc9rrf3-Fair-Value-Gap-FVG-Histogram/
+
+//@version=5
+indicator("FVG Histogram [DojiEmoji]", overlay=false, max_labels_count = 500) 
+
+
+//-----------
+// Settings
+//-----------
+
+var string GROUP0 = "Basics"
+var string GROUP1 = "Search for: Large FVGs"
+
+var color col_up    = input.color(color.new(color.blue,0), title="Up move / Down move:", inline="ln0", group=GROUP0)
+var color col_dn    = input.color(color.new(color.red,0), title="/", inline="ln0", group=GROUP0)
+
+var bool use_compare = input.bool(true, title="", group=GROUP1, inline="bigboi_ln0")
+var int n_compare = input.int(20, title="Lookback: Largest FVG", group=GROUP1, inline="bigboi_ln0",
+ tooltip="If a new FVG is larger than all past FVGs over X bars, then indicate it with a label.", minval=2)
+var bool show_lookback = input.bool(false, title="Show info label;", inline="bigboi_ln1", group=GROUP1)
+var color info_txtcol = input.color(color.new(color.purple,0), title="text color", inline="bigboi_ln1", group=GROUP1)
+
+//==============================================================================================================//
+// FVGs
+//==============================================================================================================//
+// {
+type gap                                    // Attributes to describe a FVG 
+    float pivot_upper   = na
+    float pivot_lower   = na
+    float pivot_mid     = na
+    color hist_color    = na
+    int barindex        = na
+
+var gap[] _history = array.new<gap>()       // Array of gaps, to keep track of them.
+
+if barstate.isfirst
+    array.push(_history, gap.new())         // to prevent none type errors at the beginning when size==0
+
+// @function insert_gap(price[2], price[0]) 
+// @returns void
+insert_gap(gap g, float price_t_minustwo, float price_t_zero) =>
+    g.pivot_upper := math.max(price_t_minustwo, price_t_zero)
+    g.pivot_lower := math.min(price_t_minustwo, price_t_zero)
+    g.pivot_mid := (g.pivot_upper+g.pivot_lower)/2
+    
+    g.hist_color := price_t_minustwo < price_t_zero ? col_up : price_t_minustwo > price_t_zero ? col_dn : na
+
+    g.barindex := bar_index
+    array.unshift(_history, g)
+
+// @function get_recent_gap()
+// @returns an instance of gap object
+get_recent_gap() =>
+    if array.size(_history) == 0
+        runtime.error(message="")      
+    array.get(_history,0)
+
+// }
+
+//==============================================================================================================//
+// Tests for FVGs:
+// Requirement 1: Displacement test;    upward FVG must > 0, and downward FVG must < 0
+// Requirement 2: Threshold test;       distance of FVG must > threshold==0
+//==============================================================================================================//
+
+// FVG is valid iff both requirements (1 & 2) are met
+float test1_displacement_up = low[0] - high[2] 
+float test2_displacement_dn = high[0] - low[2]  
+bool is_fvg_up = false, bool is_fvg_dn = false // for alerts
+if math.abs(test1_displacement_up) > 0 and test1_displacement_up > 0
+    insert_gap(gap.new(), high[2], low[0])
+    is_fvg_up := true
+if math.abs(test2_displacement_dn) > 0 and test2_displacement_dn < 0
+    insert_gap(gap.new(), low[2], high[0])
+    is_fvg_dn := true
+
+//==============================================================================================================//
+// Plotting:
+//==============================================================================================================//
+vg_magnitude = (get_recent_gap().pivot_upper-get_recent_gap().pivot_lower)[1]
+plot(vg_magnitude, style=plot.style_histogram, color=get_recent_gap().hist_color, linewidth = 4)
+
+vg_shock = ta.highest(vg_magnitude,n_compare)[1] < vg_magnitude
+
+if use_compare and vg_shock
+    if get_recent_gap().hist_color == col_up
+        label.new(x=bar_index, y=0, text="💡", style=label.style_label_up, size=size.normal, color=color.new(col_up,50))
+    else if get_recent_gap().hist_color == col_dn
+        label.new(x=bar_index, y=0, text="💡", style=label.style_label_up, size=size.normal, color=color.new(col_dn,50))
+
+var label lbl_lookback =na, label.delete(lbl_lookback[1])
+if barstate.islast and use_compare and show_lookback
+    _msg = str.format("💡 = {0} bars", str.tostring(n_compare,"#"))
+    lbl_lookback := label.new(x=bar_index+10, y=0, text=_msg, style=label.style_label_up, size=size.normal, textcolor=info_txtcol, textalign=text.align_left, color=color.new(color.black,99))
+
+//==============================================================================================================//
+// Alerts:
+//==============================================================================================================//
+alertcondition(vg_shock, title="Large FVG", message="{{exchange}}:{{ticker}} A wild FVG has appeared!, timeframe={{interval}}")
+alertcondition(is_fvg_up, title="FVG Up", message="{{exchange}}:{{ticker}} FVG Up, timeframe={{interval}}")
+alertcondition(is_fvg_dn, title="FVG Down", message="{{exchange}}:{{ticker}} FVG Down, timeframe={{interval}}")
+alertcondition(is_fvg_dn or is_fvg_up, title="FVG [either] Up or Down", message="{{exchange}}:{{ticker}} FVG, timeframe={{interval}}")

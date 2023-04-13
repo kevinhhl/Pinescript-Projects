@@ -2,12 +2,13 @@
 // © DojiEmoji 
 
 
-// This indicator uses a histogram to represent "fair value gaps" ("FVG"). FVG is a popular pattern among modern traders.
-// https://www.tradingview.com/script/Upc9rrf3-Fair-Value-Gap-FVG-Histogram/
+// This indicator uses a bar chart*** to represent "fair value gaps" ("FVG"). FVG is a popular pattern among modern traders.
+
+// *** Typo: Contrary to what the name in the write-up suggests, This is a bart chart (not a histogram)***
+//     Histograms are used to represent the distribution of a dataset. On the other hand, bar charts are used to compare discrete values (In this case, we are displaying the magnitude of the FVG).
 
 //@version=5
-indicator("FVG Histogram [DojiEmoji]", overlay=false, max_labels_count = 500) 
-
+indicator("FVG Bar Chart [DojiEmoji]", overlay=false, max_labels_count = 500)
 
 //-----------
 // Settings
@@ -19,11 +20,12 @@ var string GROUP1 = "Search for: Large FVGs"
 var color col_up    = input.color(color.new(color.blue,0), title="Up move / Down move:", inline="ln0", group=GROUP0)
 var color col_dn    = input.color(color.new(color.red,0), title="/", inline="ln0", group=GROUP0)
 
-var bool use_compare = input.bool(true, title="", group=GROUP1, inline="bigboi_ln0")
 var int n_compare = input.int(20, title="Lookback: Largest FVG", group=GROUP1, inline="bigboi_ln0",
  tooltip="If a new FVG is larger than all past FVGs over X bars, then indicate it with a label.", minval=2)
-var bool show_lookback = input.bool(false, title="Show info label;", inline="bigboi_ln1", group=GROUP1)
-var color info_txtcol = input.color(color.new(color.purple,0), title="text color", inline="bigboi_ln1", group=GROUP1)
+var bool show_label1 = input.bool(false, title="Show signal label", inline="bigboi_ln2", group=GROUP1)
+var bool transp_reduct = input.bool(true, title="Make bars more transparent (Insignificant FVGs)", inline="bigboi_ln3", group=GROUP1)
+var bool show_label2 = input.bool(false, title="Show info label", inline="bigboi_ln4", group=GROUP1)
+var color info_txtcol = input.color(color.new(color.purple,0), title="text color", inline="bigboi_ln4", group=GROUP1)
 
 //==============================================================================================================//
 // FVGs
@@ -83,20 +85,24 @@ if math.abs(test2_displacement_dn) > 0 and test2_displacement_dn < 0
 // Plotting:
 //==============================================================================================================//
 vg_magnitude = (get_recent_gap().pivot_upper-get_recent_gap().pivot_lower)[1]
-plot(vg_magnitude, style=plot.style_histogram, color=get_recent_gap().hist_color, linewidth = 4)
 
 vg_shock = ta.highest(vg_magnitude,n_compare)[1] < vg_magnitude
 
-if use_compare and vg_shock
-    if get_recent_gap().hist_color == col_up
-        label.new(x=bar_index, y=0, text="💡", style=label.style_label_up, size=size.normal, color=color.new(col_up,50))
-    else if get_recent_gap().hist_color == col_dn
-        label.new(x=bar_index, y=0, text="💡", style=label.style_label_up, size=size.normal, color=color.new(col_dn,50))
+if vg_shock
+    if show_label1
+        if get_recent_gap().hist_color == col_up
+            label.new(x=bar_index, y=0, text="💡", style=label.style_label_up, size=size.normal, color=color.new(col_up,50))
+        else if get_recent_gap().hist_color == col_dn
+            label.new(x=bar_index, y=0, text="💡", style=label.style_label_up, size=size.normal, color=color.new(col_dn,50))
 
 var label lbl_lookback =na, label.delete(lbl_lookback[1])
-if barstate.islast and use_compare and show_lookback
+if barstate.islast and show_label2
     _msg = str.format("💡 = {0} bars", str.tostring(n_compare,"#"))
     lbl_lookback := label.new(x=bar_index+10, y=0, text=_msg, style=label.style_label_up, size=size.normal, textcolor=info_txtcol, textalign=text.align_left, color=color.new(color.black,99))
+
+// Defaut: User defined color with added transparancy, if it's a significant FVG, then add another layer of coloring on top of it 
+plot(vg_magnitude, style=plot.style_histogram, color=color.new(get_recent_gap().hist_color,transp_reduct?50:0), linewidth = 4)
+plot(vg_magnitude, style=plot.style_histogram, color=vg_shock?color.new(get_recent_gap().hist_color,0):na, linewidth = 4)
 
 //==============================================================================================================//
 // Alerts:

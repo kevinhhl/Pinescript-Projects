@@ -4,28 +4,36 @@
 
 // This indicator uses a bar chart*** to represent "fair value gaps" ("FVG"). FVG is a popular pattern among modern traders.
 
-// *** Typo: Contrary to what the name in the write-up suggests, This is a bart chart (not a histogram)***
-//     Histograms are used to represent the distribution of a dataset. On the other hand, bar charts are used to compare discrete values (In this case, we are displaying the magnitude of the FVG).
+// *** Typo in the write-up: The bars plotted as time series are a bar chart (not a histogram). ***
+//     Rather: The histogram that depicts the distribution of magnitudes of FVGs is plotted to the right-hand side of the last bar.
 
 //@version=5
-indicator("FVG Bar Chart [DojiEmoji]", overlay=false, max_labels_count = 500)
+indicator("FVG Histogram [DojiEmoji]", overlay=false, max_labels_count = 500)
 
 //-----------
 // Settings
 //-----------
 
-var string GROUP0 = "Basics"
-var string GROUP1 = "Search for: Large FVGs"
+var string GROUP0 = "Bar Chart - Percent Rank (Lookback)"
+var string GROUP2 = "Histogram - Recent gaps, ignoring time interval"
 
-var color col_up    = input.color(color.new(color.blue,0), title="Up move / Down move:", inline="ln0", group=GROUP0)
-var color col_dn    = input.color(color.new(color.red,0), title="/", inline="ln0", group=GROUP0)
+var color col_up    = input.color(color.new(color.blue,0), title="Up move / Down move:", inline="ln0" )
+var color col_dn    = input.color(color.new(color.red,0), title="/", inline="ln0" )
 
-var int n_compare = input.int(20, title="Lookback: Largest FVG", group=GROUP1, inline="bigboi_ln0",
+var int n_compare = input.int(20, title="Lookback: Largest FVG", group=GROUP0, inline="barchart_ln0",
  tooltip="If a new FVG is larger than all past FVGs over X bars, then indicate it with a label.", minval=2)
-var bool show_label1 = input.bool(false, title="Show signal label", inline="bigboi_ln2", group=GROUP1)
-var bool transp_reduct = input.bool(true, title="Make bars more transparent (Insignificant FVGs)", inline="bigboi_ln3", group=GROUP1)
-var bool show_label2 = input.bool(false, title="Show info label", inline="bigboi_ln4", group=GROUP1)
-var color info_txtcol = input.color(color.new(color.purple,0), title="text color", inline="bigboi_ln4", group=GROUP1)
+var bool show_label1 = true//input.bool(false, title="Show signal label", inline="barchart_ln2", group=GROUP0)
+var bool transp_reduct = input.bool(true, title="Make bars transparent (Insignificant FVGs)", inline="barchart_ln3", group=GROUP0)
+var bool show_label2 = input.bool(false, title="Show info label", inline="barchart_ln4", group=GROUP0)
+var color info_txtcol = input.color(color.new(color.purple,0), title="", inline="barchart_ln4", group=GROUP0)
+
+var bool show_histogram = input.bool(true, title="Show histogram", group=GROUP2)
+var int n_histogram = input.int(100, title="No. of observations", minval=100, maxval=200, tooltip="Ignores time interval")
+var int n_bins = input.int(10, title="No. of bins", minval=2, maxval=50)
+var bool show_hist_info = input.bool(false, title="Show frequency table info", group=GROUP2)
+var color col_hist = input.color(color.new(color.orange,20), title="Histogram color", group=GROUP2, 
+ tooltip="Visualize the distribution of FVGs. Note that most FVGs have low magnitudes and tend to fall on the left tail of the distribution.\n\nTo indicate the bin associated with the most recent FVG, the symbol '^' will be used directly below the corresponding bin.")
+var bool signal_filter_hist = input.bool(false, title="Filter signals (If FVG is at the first bin)")
 
 //==============================================================================================================//
 // FVGs
@@ -38,10 +46,7 @@ type gap                                    // Attributes to describe a FVG
     color hist_color    = na
     int barindex        = na
 
-var gap[] _history = array.new<gap>()       // Array of gaps, to keep track of them.
-
-if barstate.isfirst
-    array.push(_history, gap.new())         // to prevent none type errors at the beginning when size==0
+var gap[] ao_gaps = array.new<gap>()       // Array of gaps, to keep track of them. 
 
 // @function insert_gap(price[2], price[0]) 
 // @returns void
@@ -53,14 +58,17 @@ insert_gap(gap g, float price_t_minustwo, float price_t_zero) =>
     g.hist_color := price_t_minustwo < price_t_zero ? col_up : price_t_minustwo > price_t_zero ? col_dn : na
 
     g.barindex := bar_index
-    array.unshift(_history, g)
+    array.unshift(ao_gaps, g)
 
 // @function get_recent_gap()
 // @returns an instance of gap object
 get_recent_gap() =>
-    if array.size(_history) == 0
-        runtime.error(message="")      
-    array.get(_history,0)
+    gap result = na 
+    if array.size(ao_gaps) == 0
+        result := gap.new()
+    else
+        result := array.get(ao_gaps,0) 
+    result
 
 // }
 
@@ -74,6 +82,7 @@ get_recent_gap() =>
 float test1_displacement_up = low[0] - high[2] 
 float test2_displacement_dn = high[0] - low[2]  
 bool is_fvg_up = false, bool is_fvg_dn = false // for alerts
+
 if math.abs(test1_displacement_up) > 0 and test1_displacement_up > 0
     insert_gap(gap.new(), high[2], low[0])
     is_fvg_up := true
@@ -82,27 +91,84 @@ if math.abs(test2_displacement_dn) > 0 and test2_displacement_dn < 0
     is_fvg_dn := true
 
 //==============================================================================================================//
-// Plotting:
+// Histogram
 //==============================================================================================================//
-vg_magnitude = (get_recent_gap().pivot_upper-get_recent_gap().pivot_lower)[1]
+crnt_fvg_magnitude = (get_recent_gap().pivot_upper-get_recent_gap().pivot_lower)[1]
+var int _offset = 10 // No. of bars to offset the histogram, relative to bar.last, right hand side 
+var label lbl_hist_info = na, label.delete(lbl_hist_info[1])
+var label lbl_crnt_fvg_bin = na, label.delete(lbl_crnt_fvg_bin[1]) 
+int crnt_fvg_hist_loc = na 
 
-vg_shock = ta.highest(vg_magnitude,n_compare)[1] < vg_magnitude
+if array.size(ao_gaps) > n_histogram
 
-if vg_shock
-    if show_label1
-        if get_recent_gap().hist_color == col_up
-            label.new(x=bar_index, y=0, text="💡", style=label.style_label_up, size=size.normal, color=color.new(col_up,50))
-        else if get_recent_gap().hist_color == col_dn
-            label.new(x=bar_index, y=0, text="💡", style=label.style_label_up, size=size.normal, color=color.new(col_dn,50))
+    // Initi array of float containing magnitudes of recent FVGs
+    float[] aof_magnitude = array.new_float()
+    for i=0 to n_histogram-1
+        array.push(aof_magnitude, array.get(ao_gaps, i).pivot_upper - array.get(ao_gaps, i).pivot_lower)
+
+    float bin_size = (array.max(aof_magnitude)-array.min(aof_magnitude))/n_bins
+    
+    // Init. frequency table
+    int[] freq_table = array.new_int(size=n_bins+1, initial_value=0)
+
+    // Sum up occurence via freq_table[_i]++
+    for i=0 to n_histogram-1
+        float data_point = array.get(aof_magnitude,i)
+        int _i = math.floor(data_point/bin_size)
+        if data_point == crnt_fvg_magnitude
+            crnt_fvg_hist_loc := _i
+        array.set(freq_table, _i, array.get(freq_table,_i)+1)
+
+    _debug_msg = "Frequency Table {\n"
+    
+    for i=0 to array.size(freq_table)-1 
+        _debug_msg := _debug_msg + str.format("    {0} : {1}{2}\n",str.tostring(i,"#"), str.tostring(array.get(freq_table,i),"#"), crnt_fvg_hist_loc==i ? "<--Current Bin" : "")
+    
+    _debug_msg += "}"
+    
+    // if barstate.islast
+
+    var box[] plots = array.new_box()        
+    while(array.size(plots)!=0)
+        box.delete(array.pop(plots))
+
+    var float _total_area = 10*n_bins
+    if show_histogram
+        for i=0 to array.size(freq_table)-1
+            _i = bar_index+_offset+i
+            bin_plot = box.new(_i, 0, _i+1, _total_area*(array.get(freq_table,i)/array.sum(freq_table)), xloc=xloc.bar_index, bgcolor=col_hist, border_color=col_hist)
+            array.push(plots, bin_plot)
+        lbl_crnt_fvg_bin := label.new(x=bar_index+_offset+crnt_fvg_hist_loc, y=0, text="^", style=label.style_label_up, size=size.huge, textcolor=col_hist, textalign=text.align_center, color=color.new(color.black,99))
+    
+    if show_hist_info
+        lbl_hist_info := label.new(bar_index+_offset-5, 50, _debug_msg + "\nBin Size=" + str.tostring(bin_size,"#.#"),xloc=xloc.bar_index, yloc=yloc.price, style=label.style_label_left, textcolor=color.white, textalign = text.align_left)
+
+//==============================================================================================================//
+// Bar Chart:
+//==============================================================================================================//
+
+_filtersignal = not signal_filter_hist or (crnt_fvg_hist_loc==0 and signal_filter_hist)
+vg_shock = ta.highest(crnt_fvg_magnitude,n_compare)[1] < crnt_fvg_magnitude and _filtersignal
+
+if vg_shock and show_label1
+    if get_recent_gap().hist_color == col_up
+        label.new(x=bar_index, y=0, text="💡", style=label.style_label_up, size=size.tiny, color=color.new(col_up,50))
+    else if get_recent_gap().hist_color == col_dn
+        label.new(x=bar_index, y=0, text="💡", style=label.style_label_up, size=size.tiny, color=color.new(col_dn,50))
 
 var label lbl_lookback =na, label.delete(lbl_lookback[1])
 if barstate.islast and show_label2
     _msg = str.format("💡 = {0} bars", str.tostring(n_compare,"#"))
     lbl_lookback := label.new(x=bar_index+10, y=0, text=_msg, style=label.style_label_up, size=size.normal, textcolor=info_txtcol, textalign=text.align_left, color=color.new(color.black,99))
 
-// Defaut: User defined color with added transparancy, if it's a significant FVG, then add another layer of coloring on top of it 
-plot(vg_magnitude, style=plot.style_histogram, color=color.new(get_recent_gap().hist_color,transp_reduct?50:0), linewidth = 4)
-plot(vg_magnitude, style=plot.style_histogram, color=vg_shock?color.new(get_recent_gap().hist_color,0):na, linewidth = 4)
+relative_magnit = ta.percentrank(crnt_fvg_magnitude, n_compare)
+hline(0, color=color.new(color.gray,50), editable=false)
+hline(100, color=color.new(color.gray,50), editable=false)
+
+// Default color = input with 50% transparancy, if it's a large FVG, then use original color
+plot(relative_magnit, style=plot.style_histogram, color=color.new(get_recent_gap().hist_color,transp_reduct?50:0), linewidth = 4)
+plot(relative_magnit, style=plot.style_histogram, color=vg_shock?color.new(get_recent_gap().hist_color,0):na, linewidth = 4)
+
 
 //==============================================================================================================//
 // Alerts:
